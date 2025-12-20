@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "24159690098",
+    "project_id": "lacta-care-481813",
+    "storage_bucket": "lacta-care-481813.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:24159690098:android:525e6fd14bc624641e51eb",
+        "android_client_info": {
+          "package_name": "com.example.lactacare"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "24159690098-r79oeiarka26jb9os04fokri8o8u28fu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lactacare",
+            "certificate_hash": "71d4743829d9ddcd8258173bdd5a2a960ac67df5"
+          }
+        },
+        {
+          "client_id": "24159690098-e3kmpcm5fg4l4t3h8noapllnfar9mebe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_F4cyvxAEpUUYiCaJT89_rJ0I2uPCYTI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "24159690098-96ffdvt7gst12i364s61e4eb1lgegjpj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
