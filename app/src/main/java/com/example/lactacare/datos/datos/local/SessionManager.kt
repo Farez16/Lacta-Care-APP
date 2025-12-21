@@ -1,133 +1,49 @@
-package com.example.lactacare.datos.datos.local
+package com.example.lactacare.datos.local
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
-import com.example.lactacare.datos.dto.AuthResponse
-import com.example.lactacare.datos.dto.UserSession
-import com.example.lactacare.dominio.model.RolUsuario
-import com.google.gson.Gson
+import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import dagger.hilt.android.qualifiers.ApplicationContext
 
-/**
- * Gestor de sesión de usuario
- * Guarda y recupera la sesión del usuario de forma segura
- */
-class SessionManager(context: Context) {
+// Creamos la extensión una sola vez fuera de la clase
+private val Context.dataStore by preferencesDataStore("lactacare_session")
 
+class SessionManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
     companion object {
-        private const val PREFS_NAME = "lactacare_session"
-        private const val KEY_USER_SESSION = "user_session"
+        val KEY_TOKEN = stringPreferencesKey("auth_token")
+        val KEY_USER_ID = longPreferencesKey("user_id")
+        val KEY_FULL_NAME = stringPreferencesKey("user_fullname")
+        val KEY_ROLE = stringPreferencesKey("user_role") // "PACIENTE" o "EMPLEADO"
+        val KEY_PROFILE_COMPLETED = booleanPreferencesKey("profile_completed")
     }
 
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
-
-    private val sharedPreferences: SharedPreferences = try {
-        EncryptedSharedPreferences.create(
-            context,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    } catch (e: Exception) {
-        // Fallback a SharedPreferences normal si EncryptedSharedPreferences falla
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    }
-
-    private val gson = Gson()
-
-    /**
-     * Guarda la respuesta de autenticación y crea una sesión
-     */
-    fun saveUserSession(authResponse: AuthResponse) {
-        val userInfo = authResponse.userInfo
-
-        val session = UserSession(
-            userId = userInfo.id,
-            correo = userInfo.correo,
-            nombreCompleto = userInfo.nombreCompleto,
-            rol = RolUsuario.Companion.fromString(userInfo.rol),
-            accessToken = authResponse.accessToken,
-            refreshToken = authResponse.refreshToken,
-            tokenExpiration = System.currentTimeMillis() + (authResponse.expiresIn * 1000),
-            imagenPerfil = userInfo.imagenPerfil
-        )
-
-        val sessionJson = gson.toJson(session)
-        sharedPreferences.edit().putString(KEY_USER_SESSION, sessionJson).apply()
-    }
-
-    /**
-     * Obtiene la sesión actual del usuario
-     */
-    fun getUserSession(): UserSession? {
-        val sessionJson = sharedPreferences.getString(KEY_USER_SESSION, null) ?: return null
-
-        return try {
-            val session = gson.fromJson(sessionJson, UserSession::class.java)
-
-            // Verificar si el token ha expirado
-            if (session.isTokenExpired()) {
-                clearSession()
-                null
-            } else {
-                session
-            }
-        } catch (e: Exception) {
-            null
+    // Guardar todos los datos del usuario al hacer login
+    suspend fun saveAuthData(token: String, id: Long, name: String, role: String, completed: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_TOKEN] = token
+            prefs[KEY_USER_ID] = id
+            prefs[KEY_FULL_NAME] = name
+            prefs[KEY_ROLE] = role
+            prefs[KEY_PROFILE_COMPLETED] = completed
         }
     }
 
-    /**
-     * Limpia la sesión del usuario (logout)
-     */
-    fun clearSession() {
-        sharedPreferences.edit().clear().apply()
-    }
+    // Obtener Token
+    val authToken: Flow<String?> = context.dataStore.data.map { it[KEY_TOKEN] }
 
-    /**
-     * Actualiza el access token (útil para refresh token)
-     */
-    fun updateAccessToken(newToken: String, expiresIn: Long) {
-        val session = getUserSession() ?: return
+    // Obtener Rol
+    val userRole: Flow<String?> = context.dataStore.data.map { it[KEY_ROLE] }
 
-        val updatedSession = session.copy(
-            accessToken = newToken,
-            tokenExpiration = System.currentTimeMillis() + (expiresIn * 1000)
-        )
+    // Obtener si el perfil está completo
+    val isProfileCompleted: Flow<Boolean> = context.dataStore.data.map { it[KEY_PROFILE_COMPLETED] ?: false }
 
-        val sessionJson = gson.toJson(updatedSession)
-        sharedPreferences.edit().putString(KEY_USER_SESSION, sessionJson).apply()
-    }
-
-    /**
-     * Verifica si existe una sesión válida
-     */
-    fun hasValidSession(): Boolean {
-        return getUserSession() != null
-    }
-
-    /**
-     * Obtiene el ID del usuario actual
-     */
-    fun getUserId(): Long? {
-        return getUserSession()?.userId
-    }
-
-    /**
-     * Obtiene el rol del usuario actual
-     */
-    fun getUserRole(): RolUsuario? {
-        return getUserSession()?.rol
-    }
-
-    /**
-     * Obtiene el access token actual
-     */
-    fun getAccessToken(): String? {
-        return getUserSession()?.accessToken
+    // Cerrar Sesión
+    suspend fun clearSession() {
+        context.dataStore.edit { it.clear() }
     }
 }

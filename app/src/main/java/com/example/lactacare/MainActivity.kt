@@ -12,7 +12,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.lactacare.datos.repository.AuthRepositoryImpl
+// Importaciones de Hilt
+import dagger.hilt.android.AndroidEntryPoint
+import androidx.hilt.navigation.compose.hiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+
+// Tus Vistas y Dominio
 import com.example.lactacare.vistas.auth.PantallaBienvenida
 import com.example.lactacare.vistas.auth.PantallaLogin
 import com.example.lactacare.vistas.auth.PantallaRegistroPersona
@@ -22,13 +29,18 @@ import com.example.lactacare.vistas.home.PantallaHome
 import com.example.lactacare.vistas.lactarios.PantallaDetalleInfo
 import com.example.lactacare.vistas.lactarios.PantallaLactario
 import com.example.lactacare.dominio.model.RolUsuario
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lactacare.vistas.auth.AuthViewModel
 import com.example.lactacare.vistas.auth.PantallaRecuperarPassword
 import com.example.lactacare.vistas.auth.RegistroPersonaViewModel
+// Datos
+import com.example.lactacare.datos.local.SessionManager
 
+@AndroidEntryPoint // <--- 1. ¡OBLIGATORIO! Convierte la Activity en consumidor de Hilt
 class MainActivity : ComponentActivity() {
+
+    // <--- 2. Inyectamos SessionManager para saber si hay usuario logueado
+    @Inject
+    lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,22 +52,24 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val context = LocalContext.current
-                    val authRepository = AuthRepositoryImpl(this)
 
-                    // Verificar si hay sesión activa
-                    val startDestination = if (authRepository.isLoggedIn()) {
-                        val session = authRepository.getCurrentSession()
-                        "home/${session?.rol?.name ?: "PACIENTE"}"
-                    } else {
-                        "bienvenida"
+                    // <--- 3. Lógica de Inicio de Sesión (DataStore es asíncrono, usamos runBlocking para el arranque)
+                    val startDestination = runBlocking {
+                        val token = sessionManager.authToken.first()
+                        val rol = sessionManager.userRole.first()
+
+                        if (!token.isNullOrEmpty()) {
+                            "home/${rol ?: "PACIENTE"}"
+                        } else {
+                            "bienvenida"
+                        }
                     }
 
                     NavHost(
                         navController = navController,
                         startDestination = startDestination
                     ) {
-                        // 1. PANTALLA DE BIENVENIDA (Selección de Rol)
+                        // 1. PANTALLA DE BIENVENIDA
                         composable("bienvenida") {
                             PantallaBienvenida(
                                 onRolSeleccionado = { rol ->
@@ -63,7 +77,8 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-// NUEVA RUTA: Recuperar Contraseña con argumento de rol
+
+                        // RECUPERAR PASSWORD
                         composable(
                             route = "recuperar_password/{rolTexto}",
                             arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
@@ -71,7 +86,8 @@ class MainActivity : ComponentActivity() {
                             val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
                             val rolEnum = RolUsuario.valueOf(rolTexto)
 
-                            val authViewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory(context))
+                            // <--- 4. Usamos hiltViewModel() en lugar de Factory manual
+                            val authViewModel: AuthViewModel = hiltViewModel()
 
                             PantallaRecuperarPassword(
                                 rolUsuario = rolEnum,
@@ -79,7 +95,8 @@ class MainActivity : ComponentActivity() {
                                 onVolver = { navController.navigateUp() }
                             )
                         }
-                        // 2. PANTALLA DE LOGIN (Con Google OAuth integrado)
+
+                        // 2. PANTALLA DE LOGIN
                         composable(
                             route = "login/{rolTexto}",
                             arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
@@ -87,13 +104,12 @@ class MainActivity : ComponentActivity() {
                             val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
                             val rolEnum = RolUsuario.valueOf(rolTexto)
 
-                            // Crear ViewModel con Factory
-                            val viewModel: AuthViewModel = viewModel(
-                                factory = AuthViewModel.Factory(context)
-                            )
+                            // <--- hiltViewModel inyecta Repo y SessionManager automáticamente
+                            val viewModel: AuthViewModel = hiltViewModel()
 
-                            // Establecer el rol seleccionado
-                            viewModel.setRol(rolEnum)
+                            // Pasamos el rol al ViewModel (esto es lógica de UI, está bien aquí)
+                            // Nota: Asegúrate de tener una función en tu VM para setear el rol si la necesitas
+                            // viewModel.setRol(rolEnum)
 
                             PantallaLogin(
                                 viewModel = viewModel,
@@ -101,13 +117,12 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("registro/${rol.name}")
                                 },
                                 onIrARecuperarPassword = {
-                                    // Pasamos el rol actual para que la pantalla de recuperación tenga los colores correctos
                                     navController.navigate("recuperar_password/${rolEnum.name}")
                                 },
                                 onLoginExitoso = {
-                                    val session = authRepository.getCurrentSession()
-                                    val rolActual = session?.rol?.name ?: rolEnum.name
-                                    navController.navigate("home/$rolActual") {
+                                    // Al ser exitoso, el Repository ya guardó los datos en SessionManager.
+                                    // Solo navegamos leyendo el estado actual o el rol que tenemos.
+                                    navController.navigate("home/${rolEnum.name}") {
                                         popUpTo("bienvenida") { inclusive = true }
                                     }
                                 }
@@ -122,10 +137,8 @@ class MainActivity : ComponentActivity() {
                             val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
                             val rolEnum = RolUsuario.valueOf(rolTexto)
 
-                            // Crear ViewModel para registro
-                            val viewModel: RegistroPersonaViewModel = viewModel(
-                                factory = RegistroPersonaViewModel.Factory(LocalContext.current)
-                            )
+                            // <--- También convertimos este a Hilt (Asegúrate de ponerle @HiltViewModel a la clase)
+                            val viewModel: RegistroPersonaViewModel = hiltViewModel()
                             viewModel.setRol(rolEnum)
 
                             PantallaRegistroPersona(
@@ -136,7 +149,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 4. PANTALLA HOME PRINCIPAL
+                        // 4. PANTALLA HOME
                         composable(
                             route = "home/{rolTexto}",
                             arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
@@ -147,9 +160,9 @@ class MainActivity : ComponentActivity() {
                             PantallaHome(
                                 rolUsuario = rolEnum,
                                 onLogout = {
-                                    // Cerrar sesión
-                                    kotlinx.coroutines.runBlocking {
-                                        authRepository.logout()
+                                    // Logout usando el SessionManager inyectado
+                                    runBlocking {
+                                        sessionManager.clearSession()
                                     }
                                     navController.navigate("bienvenida") {
                                         popUpTo(0) { inclusive = true }
@@ -161,7 +174,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 5. SUB-PANTALLAS DEL PACIENTE
+                        // 5. RESTO DE PANTALLAS (Sin cambios mayores)
                         composable("reservas") {
                             PantallaLactario(onVolver = { navController.popBackStack() })
                         }

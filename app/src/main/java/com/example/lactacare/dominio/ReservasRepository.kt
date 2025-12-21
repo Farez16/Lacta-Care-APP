@@ -1,5 +1,7 @@
 package com.example.lactacare.dominio
 
+import com.example.lactacare.dominio.model.Reservas
+
 interface ReservasRepository {
     // Funciones para el Paciente (Mamá)
     suspend fun crearReserva(reserva: Reservas): Boolean

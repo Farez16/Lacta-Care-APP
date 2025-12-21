@@ -24,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -34,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel // <--- IMPORTANTE: HILT
 import com.example.lactacare.dominio.model.RolUsuario
 import com.example.lactacare.datos.dto.AuthState
 
@@ -46,13 +45,14 @@ val White = Color.White
 
 @Composable
 fun PantallaLogin(
-    viewModel: AuthViewModel = viewModel(
-        factory = AuthViewModel.Factory(LocalContext.current)
-    ),
+    // --- CORRECCIÓN CLAVE: Usamos hiltViewModel() ---
+    viewModel: AuthViewModel = hiltViewModel(),
+    // -----------------------------------------------
     onIrARegistro: (RolUsuario) -> Unit,
     onLoginExitoso: () -> Unit,
     onIrARecuperarPassword: () -> Unit
 ) {
+    // Observamos el estado del ViewModel
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -74,9 +74,9 @@ fun PantallaLogin(
         }
     }
 
-    // Observar cambios en authState
+    // Reaccionar a cambios de estado
     LaunchedEffect(authState) {
-        when (val state = authState) {
+        when (authState) {
             is AuthState.Authenticated -> {
                 onLoginExitoso()
             }
@@ -87,7 +87,7 @@ fun PantallaLogin(
         }
     }
 
-    // Mostrar pantalla de completar perfil si es necesario
+    // Mostrar pantalla de completar perfil si es necesario (Google flow)
     if (showCompletarPerfil && profileIncompleteData != null) {
         PantallaCompletarPerfil(
             viewModel = viewModel,
@@ -102,17 +102,17 @@ fun PantallaLogin(
                 viewModel.logout()
             }
         )
-        return
+        return // Salimos para no dibujar el login debajo
     }
 
-    // Observar login exitoso tradicional
+    // Login normal exitoso
     LaunchedEffect(loginExitoso) {
         if (loginExitoso) {
             onLoginExitoso()
         }
     }
 
-    // --- LÓGICA DE COLORES (INTACTA) ---
+    // --- CONFIGURACIÓN DE TEMA SEGÚN ROL ---
     data class TemaRol(
         val titulo: String,
         val icono: ImageVector,
@@ -146,7 +146,7 @@ fun PantallaLogin(
         )
     }
 
-    // --- UI: CLONANDO EL HTML ---
+    // --- INTERFAZ DE USUARIO ---
     Scaffold(
         containerColor = tema.colorFondoPantalla
     ) { padding ->
@@ -160,7 +160,7 @@ fun PantallaLogin(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 1. HEADER: "LactaCare"
+            // HEADER: Nombre App
             Text(
                 text = "LactaCare",
                 fontSize = 36.sp,
@@ -169,7 +169,7 @@ fun PantallaLogin(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // 2. IMAGEN
+            // ICONO CENTRAL CAMBIANTE
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -186,7 +186,7 @@ fun PantallaLogin(
                 )
             }
 
-            // 3. TÍTULOS
+            // TÍTULO SEGÚN ROL
             Text(
                 text = tema.titulo,
                 fontSize = 32.sp,
@@ -204,7 +204,8 @@ fun PantallaLogin(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            // 4. TOGGLE SWITCH
+            // SWITCH DE ROL / MODO (REGISTRO vs LOGIN)
+            // Aquí usamos el switch para cambiar entre "Iniciar Sesión" y navegar a "Registrarse"
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -214,7 +215,7 @@ fun PantallaLogin(
                     .padding(4.dp)
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
-                    // Botón Activo (Login)
+                    // Opción Login (Activa)
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -225,7 +226,7 @@ fun PantallaLogin(
                     ) {
                         Text("Iniciar Sesión", fontWeight = FontWeight.SemiBold, color = SlateGray)
                     }
-                    // Botón Inactivo (Registro)
+                    // Opción Registro (Botón)
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -240,7 +241,9 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 5. INPUTS
+            // --- CAMPOS DE TEXTO ---
+
+            // EMAIL
             CampoLoginHtml(
                 label = "Email",
                 valor = email,
@@ -251,7 +254,7 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password
+            // PASSWORD
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Contraseña",
@@ -278,7 +281,7 @@ fun PantallaLogin(
                 )
             }
 
-            // Enlace Olvidó Contraseña - AHORA FUNCIONAL
+            // RECUPERAR PASSWORD
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 Text(
                     text = "¿Olvidaste tu contraseña?",
@@ -293,15 +296,11 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Mensajes de error
+            // MENSAJES DE ERROR
             if (error != null) {
                 Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFFFEBEE)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 ) {
                     Text(
                         error!!,
@@ -313,12 +312,10 @@ fun PantallaLogin(
                 }
             }
 
-            // 6. BOTÓN PRINCIPAL
+            // BOTÓN LOGIN
             Button(
                 onClick = { viewModel.login() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = tema.colorPrincipal,
@@ -327,10 +324,7 @@ fun PantallaLogin(
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(
-                        color = White,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    CircularProgressIndicator(color = White, modifier = Modifier.size(24.dp))
                 } else {
                     Text("Iniciar Sesión", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
@@ -338,32 +332,29 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 7. DIVIDER CON "O"
+            // DIVISOR
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = LightGray)
-                Text(
-                    text = "O",
-                    fontSize = 14.sp,
-                    color = SlateGray.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
+                Text("O", fontSize = 14.sp, color = SlateGray.copy(alpha = 0.7f), modifier = Modifier.padding(horizontal = 8.dp))
                 HorizontalDivider(modifier = Modifier.weight(1f), color = LightGray)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 8. BOTÓN GOOGLE - AHORA FUERZA SELECCIÓN DE CUENTA
+            // BOTÓN GOOGLE
             OutlinedButton(
                 onClick = {
-                    val signInIntent = viewModel.getGoogleSignInIntent()
-                    googleSignInLauncher.launch(signInIntent)
+                    try {
+                        val signInIntent = viewModel.getGoogleSignInIntent()
+                        googleSignInLauncher.launch(signInIntent)
+                    } catch (e: Exception) {
+                        // Manejo de error si no está configurado Google
+                    }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(8.dp),
                 border = BorderStroke(1.dp, LightGray),
                 colors = ButtonDefaults.outlinedButtonColors(containerColor = White),
@@ -376,7 +367,7 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 9. FOOTER
+            // FOOTER LEGAL
             val footerText = buildAnnotatedString {
                 append("Al continuar, aceptas nuestra ")
                 withStyle(SpanStyle(color = tema.colorPrincipal, fontWeight = FontWeight.SemiBold)) {
@@ -395,14 +386,12 @@ fun PantallaLogin(
                 textAlign = TextAlign.Center,
                 lineHeight = 16.sp
             )
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
-// --- COMPONENTES AUXILIARES PARA ESTILO HTML ---
-
+// FUNCIONES AUXILIARES DE DISEÑO
 @Composable
 fun CampoLoginHtml(
     label: String,

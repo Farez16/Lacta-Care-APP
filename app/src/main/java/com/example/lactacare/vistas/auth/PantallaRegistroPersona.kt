@@ -8,9 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.ChildCare
-import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -31,10 +30,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.lactacare.dominio.model.RolUsuario
-import androidx.compose.ui.platform.LocalContext
 import java.time.Instant
-import java.time.LocalDate // IMPORTADO
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -53,11 +50,13 @@ fun PantallaRegistroPersona(
 ) {
     // Datos del ViewModel
     val datos by viewModel.uiState.collectAsState()
-    val rol by viewModel.rolActual.collectAsState()
     val cargando by viewModel.isLoading.collectAsState()
     val mensaje by viewModel.mensaje.collectAsState()
     val registroExitoso by viewModel.registroExitoso.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
+
+    // --- COLOR FIJO PARA PACIENTE (Rosado Suave) ---
+    val colorPrincipal = Color(0xFFFFC0CB)
 
     // --- ESTADOS DEL CALENDARIO ---
     var mostrarCalendario by remember { mutableStateOf(false) }
@@ -71,7 +70,6 @@ fun PantallaRegistroPersona(
             .toEpochMilli()
     }
 
-    // Estado del DatePicker
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = datos.fechaNacimiento.takeIf { it.isNotBlank() }?.let {
             try {
@@ -88,7 +86,6 @@ fun PantallaRegistroPersona(
         }
     )
 
-    // --- DIÁLOGO DEL CALENDARIO ---
     if (mostrarCalendario) {
         DatePickerDialog(
             onDismissRequest = { mostrarCalendario = false },
@@ -111,12 +108,12 @@ fun PantallaRegistroPersona(
                         }
                     }
                 }) {
-                    Text("OK", color = Color(0xFF546E7A)) // Ajustado temporalmente para evitar error si 'tema' no se ha declarado
+                    Text("OK", color = colorPrincipal)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { mostrarCalendario = false }) {
-                    Text("Cancelar")
+                    Text("Cancelar", color = TextoOscuroClean)
                 }
             }
         ) {
@@ -129,31 +126,6 @@ fun PantallaRegistroPersona(
             kotlinx.coroutines.delay(1000)
             onIrALogin()
         }
-    }
-
-    // --- 1. CONFIGURACIÓN DE TEMA SEGÚN ROL ---
-    data class TemaRegistro(
-        val colorPrincipal: Color,
-        val tituloRol: String,
-        val icono: ImageVector
-    )
-
-    val tema = when (rol) {
-        RolUsuario.ADMINISTRADOR -> TemaRegistro(
-            colorPrincipal = Color(0xFFA3C9A8),
-            tituloRol = "Administrativo",
-            icono = Icons.Default.Apartment
-        )
-        RolUsuario.DOCTOR -> TemaRegistro(
-            colorPrincipal = Color(0xFFB0C4DE),
-            tituloRol = "Médico",
-            icono = Icons.Default.HealthAndSafety
-        )
-        RolUsuario.PACIENTE -> TemaRegistro(
-            colorPrincipal = Color(0xFFFFC0CB),
-            tituloRol = "Paciente",
-            icono = Icons.Default.ChildCare
-        )
     }
 
     Scaffold(
@@ -169,19 +141,32 @@ fun PantallaRegistroPersona(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
+            // TÍTULO FIJO
             Text(
                 text = "Crear Cuenta",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextoOscuroClean
             )
-            Text(
-                text = "Registro de ${tema.tituloRol}",
-                fontSize = 16.sp,
-                color = tema.colorPrincipal,
-                fontWeight = FontWeight.Bold,
+            // SUBTÍTULO FIJO CON ICONO DE BEBÉ
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 4.dp)
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChildCare,
+                    contentDescription = null,
+                    tint = colorPrincipal,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Registro de Paciente",
+                    fontSize = 16.sp,
+                    color = colorPrincipal,
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -219,25 +204,25 @@ fun PantallaRegistroPersona(
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            SeccionFormulario("Datos Personales", tema.colorPrincipal)
+            SeccionFormulario("Datos Personales", colorPrincipal)
 
-            CampoRegistroClean(label = "Cédula / DNI", valor = datos.cedula, placeholder = "110...", icon = Icons.Outlined.Badge, teclado = KeyboardType.Number, colorFocus = tema.colorPrincipal) { viewModel.onCedulaChange(it) }
+            CampoRegistroClean(label = "Cédula / DNI", valor = datos.cedula, placeholder = "110...", icon = Icons.Outlined.Badge, teclado = KeyboardType.Number, colorFocus = colorPrincipal) { viewModel.onCedulaChange(it) }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.weight(1f)) {
-                    CampoRegistroClean(label = "Primer Nombre", valor = datos.primerNombre, placeholder = "Juan", icon = Icons.Outlined.Person, colorFocus = tema.colorPrincipal) { viewModel.onPrimerNombreChange(it) }
+                    CampoRegistroClean(label = "Primer Nombre", valor = datos.primerNombre, placeholder = "Juan", icon = Icons.Outlined.Person, colorFocus = colorPrincipal) { viewModel.onPrimerNombreChange(it) }
                 }
                 Box(Modifier.weight(1f)) {
-                    CampoRegistroClean(label = "Segundo Nombre", valor = datos.segundoNombre, placeholder = "Carlos", icon = Icons.Outlined.Person, colorFocus = tema.colorPrincipal) { viewModel.onSegundoNombreChange(it) }
+                    CampoRegistroClean(label = "Segundo Nombre", valor = datos.segundoNombre, placeholder = "Carlos", icon = Icons.Outlined.Person, colorFocus = colorPrincipal) { viewModel.onSegundoNombreChange(it) }
                 }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.weight(1f)) {
-                    CampoRegistroClean(label = "Primer Apellido", valor = datos.primerApellido, placeholder = "Pérez", icon = Icons.Outlined.Person, colorFocus = tema.colorPrincipal) { viewModel.onPrimerApellidoChange(it) }
+                    CampoRegistroClean(label = "Primer Apellido", valor = datos.primerApellido, placeholder = "Pérez", icon = Icons.Outlined.Person, colorFocus = colorPrincipal) { viewModel.onPrimerApellidoChange(it) }
                 }
                 Box(Modifier.weight(1f)) {
-                    CampoRegistroClean(label = "Segundo Apellido", valor = datos.segundoApellido, placeholder = "Gómez", icon = Icons.Outlined.Person, colorFocus = tema.colorPrincipal) { viewModel.onSegundoApellidoChange(it) }
+                    CampoRegistroClean(label = "Segundo Apellido", valor = datos.segundoApellido, placeholder = "Gómez", icon = Icons.Outlined.Person, colorFocus = colorPrincipal) { viewModel.onSegundoApellidoChange(it) }
                 }
             }
 
@@ -247,7 +232,7 @@ fun PantallaRegistroPersona(
                     valor = datos.fechaNacimiento,
                     placeholder = "Seleccione su fecha",
                     icon = Icons.Outlined.DateRange,
-                    colorFocus = tema.colorPrincipal,
+                    colorFocus = colorPrincipal,
                     onClick = { mostrarCalendario = true }
                 )
                 if (errorEdad != null) {
@@ -261,34 +246,22 @@ fun PantallaRegistroPersona(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = BordeGrisClean) // Corregido
+            HorizontalDivider(color = BordeGrisClean)
             Spacer(modifier = Modifier.height(16.dp))
 
-            when (rol) {
-                RolUsuario.DOCTOR -> {
-                    SeccionFormulario("Credenciales Médicas", tema.colorPrincipal)
-                    CampoRegistroClean(label = "Codigo Médico", valor = datos.licenciaMedica, placeholder = "Nro. Licencia", icon = Icons.Outlined.HealthAndSafety, colorFocus = tema.colorPrincipal) { viewModel.onLicenciaChange(it) }
-                }
-                RolUsuario.ADMINISTRADOR -> {
-                    SeccionFormulario("Creedenciales Administrativas", tema.colorPrincipal)
-                    CampoRegistroClean(label = "Código Empleado", valor = datos.codigoEmpleado, placeholder = "ADM-001", icon = Icons.Outlined.Badge, colorFocus = tema.colorPrincipal) { viewModel.onCodigoEmpleadoChange(it) }
-
-                }
-                RolUsuario.PACIENTE -> {
-                    SeccionFormulario("Información Adicional", tema.colorPrincipal)
-                    CampoRegistroClean(label = "Discapacidad (Opcional)", valor = datos.discapacidad, placeholder = "Detalle si aplica", icon = Icons.Outlined.Accessible, colorFocus = tema.colorPrincipal) { viewModel.onDiscapacidadChange(it) }
-                }
-            }
+            // SOLO MOSTRAMOS SECCIÓN DE INFORMACIÓN ADICIONAL (DISCAPACIDAD)
+            SeccionFormulario("Información Adicional", colorPrincipal)
+            CampoRegistroClean(label = "Discapacidad (Opcional)", valor = datos.discapacidad, placeholder = "Detalle si aplica", icon = Icons.Outlined.Accessible, colorFocus = colorPrincipal) { viewModel.onDiscapacidadChange(it) }
 
             Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = BordeGrisClean) // Corregido
+            HorizontalDivider(color = BordeGrisClean)
             Spacer(modifier = Modifier.height(16.dp))
 
-            SeccionFormulario("Cuenta", tema.colorPrincipal)
+            SeccionFormulario("Cuenta", colorPrincipal)
 
-            CampoRegistroClean(label = "Correo Electrónico", valor = datos.correo, placeholder = "tu@email.com", icon = Icons.Outlined.Email, teclado = KeyboardType.Email, colorFocus = tema.colorPrincipal) { viewModel.onCorreoChange(it) }
+            CampoRegistroClean(label = "Correo Electrónico", valor = datos.correo, placeholder = "tu@email.com", icon = Icons.Outlined.Email, teclado = KeyboardType.Email, colorFocus = colorPrincipal) { viewModel.onCorreoChange(it) }
 
-            CampoRegistroClean(label = "Teléfono", valor = datos.telefono, placeholder = "0987654321", icon = Icons.Outlined.Phone, teclado = KeyboardType.Phone, colorFocus = tema.colorPrincipal) { viewModel.onTelefonoChange(it) }
+            CampoRegistroClean(label = "Teléfono", valor = datos.telefono, placeholder = "0987654321", icon = Icons.Outlined.Phone, teclado = KeyboardType.Phone, colorFocus = colorPrincipal) { viewModel.onTelefonoChange(it) }
 
             Text(
                 text = "Contraseña",
@@ -303,13 +276,13 @@ fun PantallaRegistroPersona(
                 placeholder = { Text("Mínimo 8 caracteres", color = Color.Gray) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                colors = inputColorsClean(tema.colorPrincipal),
+                colors = inputColorsClean(colorPrincipal),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 trailingIcon = {
                     val imagen = if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imagen, contentDescription = null, tint = tema.colorPrincipal)
+                        Icon(imagen, contentDescription = null, tint = colorPrincipal)
                     }
                 }
             )
@@ -319,7 +292,7 @@ fun PantallaRegistroPersona(
             if (mensaje != null) {
                 Text(
                     text = mensaje ?: "",
-                    color = if (registroExitoso) tema.colorPrincipal else Color.Red,
+                    color = if (registroExitoso) colorPrincipal else Color.Red,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
                     fontWeight = if (registroExitoso) FontWeight.Bold else FontWeight.Normal,
@@ -334,12 +307,12 @@ fun PantallaRegistroPersona(
                     .height(55.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = tema.colorPrincipal,
-                    contentColor = if (rol == RolUsuario.PACIENTE) TextoOscuroClean else Color.White
+                    containerColor = colorPrincipal,
+                    contentColor = TextoOscuroClean // Texto oscuro para contrastar con el rosado claro
                 ),
                 enabled = !cargando
             ) {
-                if (cargando) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                if (cargando) CircularProgressIndicator(color = TextoOscuroClean, modifier = Modifier.size(24.dp))
                 else Text("Confirmar Registro", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
 
@@ -347,9 +320,9 @@ fun PantallaRegistroPersona(
 
             val textoLegal = buildAnnotatedString {
                 append("Al registrarte aceptas los ")
-                withStyle(SpanStyle(color = tema.colorPrincipal, fontWeight = FontWeight.Bold)) { append("Términos") }
+                withStyle(SpanStyle(color = colorPrincipal, fontWeight = FontWeight.Bold)) { append("Términos") }
                 append(" y ")
-                withStyle(SpanStyle(color = tema.colorPrincipal, fontWeight = FontWeight.Bold)) { append("Política de Privacidad") }
+                withStyle(SpanStyle(color = colorPrincipal, fontWeight = FontWeight.Bold)) { append("Política de Privacidad") }
             }
             Text(text = textoLegal, fontSize = 11.sp, color = TextoOscuroClean.copy(alpha = 0.7f), textAlign = TextAlign.Center)
 
