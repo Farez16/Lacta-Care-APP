@@ -1,20 +1,20 @@
 package com.example.lactacare.vistas.auth
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.lactacare.datos.repository.AuthRepositoryImpl
-import com.example.lactacare.dominio.model.RolUsuario
-import com.example.lactacare.dominio.model.Administrador
-import com.example.lactacare.dominio.model.Medico
+// --- CORRECCIÓN IMPORTANTE AQUÍ ABAJO ---
+import com.example.lactacare.dominio.repository.AuthRepository
+// ----------------------------------------
 import com.example.lactacare.dominio.model.Paciente
+import com.example.lactacare.dominio.model.RolUsuario
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-// UI State unificado
+// UI State simplificado
 data class RegistroUiState(
     val cedula: String = "",
     val primerNombre: String = "",
@@ -25,21 +25,16 @@ data class RegistroUiState(
     val telefono: String = "",
     val fechaNacimiento: String = "",
     val discapacidad: String = "",
-    // Campos Específicos
-    val licenciaMedica: String = "",
-    val codigoEmpleado: String = "",
     val password: String = ""
 )
 
-class RegistroPersonaViewModel(
-    private val authRepository: AuthRepositoryImpl
+@HiltViewModel
+class RegistroPersonaViewModel @Inject constructor(
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistroUiState())
     val uiState = _uiState.asStateFlow()
-
-    private val _rolActual = MutableStateFlow(RolUsuario.PACIENTE)
-    val rolActual = _rolActual.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -50,9 +45,12 @@ class RegistroPersonaViewModel(
     private val _registroExitoso = MutableStateFlow(false)
     val registroExitoso = _registroExitoso.asStateFlow()
 
+    // Variable para guardar el rol que viene desde la MainActivity
+    private var currentRol: RolUsuario = RolUsuario.PACIENTE
+
+    // --- 3. NUEVA FUNCIÓN NECESARIA PARA MAINACTIVITY ---
     fun setRol(rol: RolUsuario) {
-        _rolActual.value = rol
-        _mensaje.value = null
+        this.currentRol = rol
     }
 
     // --- SETTERS ---
@@ -65,11 +63,9 @@ class RegistroPersonaViewModel(
     fun onTelefonoChange(v: String) { _uiState.update { it.copy(telefono = v) } }
     fun onFechaNacimientoChange(v: String) { _uiState.update { it.copy(fechaNacimiento = v) } }
     fun onDiscapacidadChange(v: String) { _uiState.update { it.copy(discapacidad = v) } }
-    fun onLicenciaChange(v: String) { _uiState.update { it.copy(licenciaMedica = v) } }
-    fun onCodigoEmpleadoChange(v: String) { _uiState.update { it.copy(codigoEmpleado = v) } }
     fun onPasswordChange(v: String) { _uiState.update { it.copy(password = v) } }
 
-    // --- FUNCIÓN MAESTRA: REGISTRAR ---
+    // --- FUNCIÓN REGISTRAR ---
     fun registrar() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -87,7 +83,6 @@ class RegistroPersonaViewModel(
                 return@launch
             }
 
-            // Validar contraseña
             if (datos.password.length < 8) {
                 _mensaje.value = "La contraseña debe tener al menos 8 caracteres"
                 _isLoading.value = false
@@ -95,68 +90,28 @@ class RegistroPersonaViewModel(
             }
 
             try {
-                val resultado = when (_rolActual.value) {
-
-                    RolUsuario.PACIENTE -> {
-                        val paciente = Paciente(
-                            cedula = datos.cedula,
-                            primerNombre = datos.primerNombre,
-                            segundoNombre = datos.segundoNombre,
-                            primerApellido = datos.primerApellido,
-                            segundoApellido = datos.segundoApellido,
-                            correo = datos.correo,
-                            password = datos.password,
-                            telefono = datos.telefono,
-                            fechaNacimiento = datos.fechaNacimiento,
-                            discapacidad = datos.discapacidad.ifBlank { null }
-                        )
-                        authRepository.registrar(paciente)
-                    }
-
-                    RolUsuario.DOCTOR -> {
-                        if (datos.licenciaMedica.isBlank()) {
-                            _mensaje.value = "Completa licencia médica "
-                            _isLoading.value = false
-                            return@launch
-                        }
-
-                        val medico = Medico(
-                            cedula = datos.cedula,
-                            primerNombre = datos.primerNombre,
-                            segundoNombre = datos.segundoNombre,
-                            primerApellido = datos.primerApellido,
-                            segundoApellido = datos.segundoApellido,
-                            correo = datos.correo,
-                            password = datos.password,
-                            telefono = datos.telefono,
-                            fechaNacimiento = datos.fechaNacimiento,
-                            licenciaMedica = datos.licenciaMedica,
-                        )
-                        authRepository.registrar(medico)
-                    }
-
-                    RolUsuario.ADMINISTRADOR -> {
-                        if (datos.codigoEmpleado.isBlank()) {
-                            _mensaje.value = "Completa código de empleado"
-                            _isLoading.value = false
-                            return@launch
-                        }
-
-                        val admin = Administrador(
-                            cedula = datos.cedula,
-                            primerNombre = datos.primerNombre,
-                            segundoNombre = datos.segundoNombre,
-                            primerApellido = datos.primerApellido,
-                            segundoApellido = datos.segundoApellido,
-                            correo = datos.correo,
-                            password = datos.password,
-                            telefono = datos.telefono,
-                            fechaNacimiento = datos.fechaNacimiento,
-                            codigoEmpleado = datos.codigoEmpleado,
-                        )
-                        authRepository.registrar(admin)
-                    }
+                // Solo permitimos registrar Pacientes por la App (Regla de Negocio)
+                if (currentRol != RolUsuario.PACIENTE) {
+                    _mensaje.value = "El registro de ${currentRol.name} no está permitido desde la app móvil. Contacte a administración."
+                    _isLoading.value = false
+                    return@launch
                 }
+
+                val paciente = Paciente(
+                    cedula = datos.cedula,
+                    primerNombre = datos.primerNombre,
+                    segundoNombre = datos.segundoNombre,
+                    primerApellido = datos.primerApellido,
+                    segundoApellido = datos.segundoApellido,
+                    correo = datos.correo,
+                    password = datos.password,
+                    telefono = datos.telefono,
+                    fechaNacimiento = datos.fechaNacimiento,
+                    discapacidad = datos.discapacidad.ifBlank { null }
+                )
+
+                // Llamada al repositorio
+                val resultado = authRepository.registrarPaciente(paciente)
 
                 resultado.onSuccess {
                     _registroExitoso.value = true
@@ -176,20 +131,4 @@ class RegistroPersonaViewModel(
     fun resetRegistroExitoso() {
         _registroExitoso.value = false
     }
-
-    /**
-     * Factory para crear el ViewModel con dependencias
-     */
-    class Factory(private val context: Context) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(RegistroPersonaViewModel::class.java)) {
-                return RegistroPersonaViewModel(
-                    AuthRepositoryImpl(context)
-                ) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
-    }
 }
-

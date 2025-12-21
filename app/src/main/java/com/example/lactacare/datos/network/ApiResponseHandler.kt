@@ -1,70 +1,38 @@
 package com.example.lactacare.datos.network
 
-import com.example.lactacare.datos.dto.ErrorResponse
-import com.example.lactacare.datos.dto.Resource
-import com.google.gson.Gson
+import org.json.JSONObject
 import retrofit2.Response
+import javax.inject.Inject
 
-/**
- * Clase para manejar respuestas de la API
- */
-object ApiResponseHandler {
+class ApiResponseHandler @Inject constructor() {
 
-    /**
-     * Maneja respuestas exitosas (200-299)
-     */
-    fun <T> handleSuccess(response: Response<T>): Resource<T> {
+    suspend fun <T> handleSuccess(
+        response: Response<T>,
+        onSuccess: suspend (T) -> Boolean
+    ): Result<Boolean> {
         return if (response.isSuccessful && response.body() != null) {
-            Resource.Success(response.body()!!)
+            onSuccess(response.body()!!)
+            Result.success(true)
         } else {
-            Resource.Error("Respuesta vacía del servidor")
+            // Aquí capturamos el mensaje de error de tu backend Spring Boot
+            val errorMsg = parseErrorBody(response)
+            Result.failure(Exception(errorMsg))
         }
     }
 
-    /**
-     * Maneja errores de la API
-     */
-    fun <T> handleError(response: Response<T>): Resource<T> {
-        val errorBody = response.errorBody()?.string()
-
+    private fun parseErrorBody(response: Response<*>): String {
         return try {
-            val errorResponse = Gson().fromJson(errorBody, ErrorResponse::class.java)
-            Resource.Error(
-                message = errorResponse.message,
-                code = errorResponse.status
-            )
-        } catch (e: Exception) {
-            Resource.Error(
-                message = "Error del servidor: ${response.code()}",
-                code = response.code()
-            )
-        }
-    }
-
-    /**
-     * Maneja excepciones
-     */
-    fun <T> handleException(exception: Exception): Resource<T> {
-        return Resource.Error(
-            message = exception.message ?: "Error desconocido"
-        )
-    }
-
-    /**
-     * Ejecuta una petición de forma segura
-     */
-    suspend fun <T> safeApiCall(
-        apiCall: suspend () -> Response<T>
-    ): Resource<T> {
-        return try {
-            val response = apiCall()
-            if (response.isSuccessful) {
-                handleSuccess(response)
+            val errorJson = response.errorBody()?.string()
+            if (errorJson != null) {
+                // Tu backend devuelve algo como: { "message": "Usuario no registrado...", "code": "USUARIO_NO_REGISTRADO" }
+                val jsonObject = JSONObject(errorJson)
+                // Priorizamos leer el campo "message" de tu JSON
+                jsonObject.optString("message", "Error desconocido del servidor")
             } else {
-                handleError(response)
+                "Error en la respuesta del servidor"
             }
         } catch (e: Exception) {
-            handleException(e)
+            "Error al leer respuesta: ${e.message}"
         }
     }
 }
