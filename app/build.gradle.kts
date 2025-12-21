@@ -6,27 +6,23 @@ plugins {
 }
 
 android {
-
-    namespace = "com.example.lactacare.dev"
-    compileSdk = 36
+    namespace = "com.example.lactacare"
+    compileSdk {
+        version = release(36)
+    }
 
     defaultConfig {
-        applicationId = "com.example.lactacare.dev"
+        applicationId = "com.example.lactacare"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
     }
-
     buildFeatures {
         compose = true
     }
-
 
     buildTypes {
         release {
@@ -38,16 +34,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "17"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
+        jvmTarget = "11"
     }
 }
 
@@ -101,6 +92,7 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
+
 
 
 }
