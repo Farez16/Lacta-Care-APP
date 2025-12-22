@@ -33,11 +33,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel // <--- IMPORTANTE: HILT
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.lactacare.dominio.model.RolUsuario
 import com.example.lactacare.datos.dto.AuthState
+import com.example.lactacare.ui.theme.SlateGray
 
-// COLORES EXTRAÍDOS
+// --- COLORES DEFINIDOS ---
 val SlateGray = Color(0xFF546E7A)
 val LightGray = Color(0xFFE0E0E0)
 val OffWhite = Color(0xFFFEFEFE)
@@ -45,14 +46,12 @@ val White = Color.White
 
 @Composable
 fun PantallaLogin(
-    // --- CORRECCIÓN CLAVE: Usamos hiltViewModel() ---
     viewModel: AuthViewModel = hiltViewModel(),
-    // -----------------------------------------------
     onIrARegistro: (RolUsuario) -> Unit,
     onLoginExitoso: () -> Unit,
     onIrARecuperarPassword: () -> Unit
 ) {
-    // Observamos el estado del ViewModel
+    // 1. OBSERVABLES DEL VIEWMODEL
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -62,10 +61,11 @@ fun PantallaLogin(
     val authState by viewModel.authState.collectAsState()
     val profileIncompleteData by viewModel.profileIncompleteData.collectAsState()
 
+    // 2. ESTADOS LOCALES DE LA UI
     var passwordVisible by remember { mutableStateOf(false) }
     var showCompletarPerfil by remember { mutableStateOf(false) }
 
-    // Google Sign-In Launcher
+    // 3. LAUNCHER DE GOOGLE
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -74,7 +74,9 @@ fun PantallaLogin(
         }
     }
 
-    // Reaccionar a cambios de estado
+    // 4. EFECTOS (Side Effects)
+
+    // Manejo de estados de autenticación (Éxito o Perfil Incompleto)
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.Authenticated -> {
@@ -87,12 +89,18 @@ fun PantallaLogin(
         }
     }
 
-    // Mostrar pantalla de completar perfil si es necesario (Google flow)
+    // Manejo simple de éxito (Legacy)
+    LaunchedEffect(loginExitoso) {
+        if (loginExitoso) {
+            onLoginExitoso()
+        }
+    }
+
+    // Si falta completar perfil (Ej. Google nuevo), mostramos esa pantalla encima
     if (showCompletarPerfil && profileIncompleteData != null) {
         PantallaCompletarPerfil(
             viewModel = viewModel,
             googleUserData = profileIncompleteData!!.googleUserData,
-            rolSeleccionado = rol,
             onPerfilCompletado = {
                 showCompletarPerfil = false
                 onLoginExitoso()
@@ -102,17 +110,10 @@ fun PantallaLogin(
                 viewModel.logout()
             }
         )
-        return // Salimos para no dibujar el login debajo
+        return // IMPORTANTE: Cortamos aquí para no dibujar el Login debajo
     }
 
-    // Login normal exitoso
-    LaunchedEffect(loginExitoso) {
-        if (loginExitoso) {
-            onLoginExitoso()
-        }
-    }
-
-    // --- CONFIGURACIÓN DE TEMA SEGÚN ROL ---
+    // 5. CONFIGURACIÓN VISUAL SEGÚN ROL (THEMING)
     data class TemaRol(
         val titulo: String,
         val icono: ImageVector,
@@ -146,7 +147,7 @@ fun PantallaLogin(
         )
     }
 
-    // --- INTERFAZ DE USUARIO ---
+    // 6. ESTRUCTURA DE LA PANTALLA
     Scaffold(
         containerColor = tema.colorFondoPantalla
     ) { padding ->
@@ -160,7 +161,7 @@ fun PantallaLogin(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            // HEADER: Nombre App
+            // -- HEADER --
             Text(
                 text = "LactaCare",
                 fontSize = 36.sp,
@@ -169,7 +170,7 @@ fun PantallaLogin(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // ICONO CENTRAL CAMBIANTE
+            // Icono Central Dinámico
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -186,7 +187,7 @@ fun PantallaLogin(
                 )
             }
 
-            // TÍTULO SEGÚN ROL
+            // Título Dinámico
             Text(
                 text = tema.titulo,
                 fontSize = 32.sp,
@@ -204,46 +205,54 @@ fun PantallaLogin(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            // SWITCH DE ROL / MODO (REGISTRO vs LOGIN)
-            // Aquí usamos el switch para cambiar entre "Iniciar Sesión" y navegar a "Registrarse"
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(LightGray.copy(alpha = 0.5f))
-                    .padding(4.dp)
-            ) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    // Opción Login (Activa)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .shadow(1.dp, RoundedCornerShape(8.dp))
-                            .background(White, RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Iniciar Sesión", fontWeight = FontWeight.SemiBold, color = SlateGray)
-                    }
-                    // Opción Registro (Botón)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable { onIrARegistro(rol) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Registrarse", fontWeight = FontWeight.SemiBold, color = SlateGray.copy(alpha = 0.7f))
+            // -- SWITCH LOGIN/REGISTRO (SOLO PACIENTES) --
+            if (rol == RolUsuario.PACIENTE) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(LightGray.copy(alpha = 0.5f))
+                        .padding(4.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        // Opción Login (Activa)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .shadow(1.dp, RoundedCornerShape(8.dp))
+                                .background(White, RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Iniciar Sesión", fontWeight = FontWeight.SemiBold, color = SlateGray)
+                        }
+                        // Opción Registro (Navegable)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable { onIrARegistro(rol) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Registrarse",
+                                fontWeight = FontWeight.SemiBold,
+                                color = SlateGray.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+            } else {
+                // Espacio extra para Doctores/Admins que no tienen el switch
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- CAMPOS DE TEXTO ---
+            // -- FORMULARIO DE LOGIN --
 
-            // EMAIL
+            // Campo Email
             CampoLoginHtml(
                 label = "Email",
                 valor = email,
@@ -254,7 +263,7 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // PASSWORD
+            // Campo Password
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Contraseña",
@@ -281,7 +290,7 @@ fun PantallaLogin(
                 )
             }
 
-            // RECUPERAR PASSWORD
+            // Recuperar Contraseña
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 Text(
                     text = "¿Olvidaste tu contraseña?",
@@ -296,7 +305,7 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // MENSAJES DE ERROR
+            // Mensajes de Error
             if (error != null) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
@@ -312,7 +321,7 @@ fun PantallaLogin(
                 }
             }
 
-            // BOTÓN LOGIN
+            // BOTÓN INICIAR SESIÓN
             Button(
                 onClick = { viewModel.login() },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -332,26 +341,30 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // DIVISOR
+            // -- SECCIÓN GOOGLE (VISIBLE PARA TODOS) --
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = LightGray)
-                Text("O", fontSize = 14.sp, color = SlateGray.copy(alpha = 0.7f), modifier = Modifier.padding(horizontal = 8.dp))
+                Text(
+                    "O",
+                    fontSize = 14.sp,
+                    color = SlateGray.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
                 HorizontalDivider(modifier = Modifier.weight(1f), color = LightGray)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // BOTÓN GOOGLE
             OutlinedButton(
                 onClick = {
                     try {
                         val signInIntent = viewModel.getGoogleSignInIntent()
                         googleSignInLauncher.launch(signInIntent)
                     } catch (e: Exception) {
-                        // Manejo de error si no está configurado Google
+                        // Manejo de error si Google no está configurado
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -360,6 +373,7 @@ fun PantallaLogin(
                 colors = ButtonDefaults.outlinedButtonColors(containerColor = White),
                 enabled = !isLoading
             ) {
+                // "Logo" de Google con texto
                 Text("G ", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Continuar con Google", color = SlateGray, fontWeight = FontWeight.SemiBold)
@@ -367,7 +381,7 @@ fun PantallaLogin(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // FOOTER LEGAL
+            // -- FOOTER LEGAL --
             val footerText = buildAnnotatedString {
                 append("Al continuar, aceptas nuestra ")
                 withStyle(SpanStyle(color = tema.colorPrincipal, fontWeight = FontWeight.SemiBold)) {
@@ -391,7 +405,8 @@ fun PantallaLogin(
     }
 }
 
-// FUNCIONES AUXILIARES DE DISEÑO
+// --- COMPONENTES AUXILIARES ---
+
 @Composable
 fun CampoLoginHtml(
     label: String,

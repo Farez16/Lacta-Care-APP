@@ -9,6 +9,5 @@ data class CompleteProfileRequest(
     val segundoApellido: String?,
     val telefono: String?,
     val fechaNacimiento: String,
-    val discapacidad: String?,    // Puede ser nulo si no es paciente
-    val codigoCredencial: String? // Puede ser nulo si es paciente
+    val discapacidad: String?,    // Puede ser nulo
 )

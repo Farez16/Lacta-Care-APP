@@ -15,7 +15,4 @@ data class Medico(
     val fechaNacimiento: String = "",
     val fotoPerfil: String = "",
     val password: String = "",
-
-    // Específicos
-    val licenciaMedica: String = "",
 )

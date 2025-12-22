@@ -1,7 +1,10 @@
 package com.example.lactacare.datos.dto
 
-// Asegúrate de que GoogleUserData existe en el mismo paquete,
-// o impórtalo si está en otro lado.
+
+data class ProfileIncompleteData(
+    val googleUserData: GoogleUserData,
+    val googleToken: String? = null // Opcional, dependiendo de tu backend
+)
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -9,12 +12,7 @@ sealed class AuthState {
     object Authenticated : AuthState()
     data class Error(val message: String) : AuthState()
 
-    // Este es vital para tu flujo de Google
-    object ProfileIncomplete : AuthState()
+    // --- CORRECCIÓN CLAVE ---
+    // Cambiamos 'object' por 'data class' para que pueda llevar los datos
+    data class ProfileIncomplete(val data: ProfileIncompleteData) : AuthState()
 }
-
-// Esta clase sirve para pasar los datos de Google a la pantalla de completar perfil
-data class ProfileIncompleteData(
-    val googleUserData: GoogleUserData,
-    val googleToken: String
-)

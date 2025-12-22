@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// UI State simplificado
+// UI State (Se mantiene igual, incluye 'discapacidad' que es campo de paciente)
 data class RegistroUiState(
     val cedula: String = "",
     val primerNombre: String = "",
@@ -45,15 +45,10 @@ class RegistroPersonaViewModel @Inject constructor(
     private val _registroExitoso = MutableStateFlow(false)
     val registroExitoso = _registroExitoso.asStateFlow()
 
-    // Variable para guardar el rol que viene desde la MainActivity
-    private var currentRol: RolUsuario = RolUsuario.PACIENTE
+    // --- YA NO NECESITAMOS 'currentRol' NI 'setRol' ---
+    // Este ViewModel asume implícitamente que siempre es un Paciente.
 
-    // --- 3. NUEVA FUNCIÓN NECESARIA PARA MAINACTIVITY ---
-    fun setRol(rol: RolUsuario) {
-        this.currentRol = rol
-    }
-
-    // --- SETTERS ---
+    // --- SETTERS (Actualizan el estado mientras el usuario escribe) ---
     fun onCedulaChange(v: String) { _uiState.update { it.copy(cedula = v) } }
     fun onPrimerNombreChange(v: String) { _uiState.update { it.copy(primerNombre = v) } }
     fun onSegundoNombreChange(v: String) { _uiState.update { it.copy(segundoNombre = v) } }
@@ -74,15 +69,16 @@ class RegistroPersonaViewModel @Inject constructor(
 
             val datos = _uiState.value
 
-            // Validaciones básicas
-            if (datos.cedula.isEmpty() || datos.primerNombre.isEmpty() ||
-                datos.primerApellido.isEmpty() || datos.correo.isEmpty() ||
-                datos.password.isEmpty()) {
+            // 1. Validaciones básicas de campos vacíos
+            if (datos.cedula.isBlank() || datos.primerNombre.isBlank() ||
+                datos.primerApellido.isBlank() || datos.correo.isBlank() ||
+                datos.password.isBlank()) {
                 _mensaje.value = "Por favor completa todos los campos obligatorios"
                 _isLoading.value = false
                 return@launch
             }
 
+            // 2. Validación de contraseña
             if (datos.password.length < 8) {
                 _mensaje.value = "La contraseña debe tener al menos 8 caracteres"
                 _isLoading.value = false
@@ -90,44 +86,41 @@ class RegistroPersonaViewModel @Inject constructor(
             }
 
             try {
-                // Solo permitimos registrar Pacientes por la App (Regla de Negocio)
-                if (currentRol != RolUsuario.PACIENTE) {
-                    _mensaje.value = "El registro de ${currentRol.name} no está permitido desde la app móvil. Contacte a administración."
-                    _isLoading.value = false
-                    return@launch
-                }
-
+                // 3. Creación del objeto Paciente
+                // Nota: discapacidad se envía como null si está vacío (String.isBlank)
                 val paciente = Paciente(
-                    cedula = datos.cedula,
-                    primerNombre = datos.primerNombre,
-                    segundoNombre = datos.segundoNombre,
-                    primerApellido = datos.primerApellido,
-                    segundoApellido = datos.segundoApellido,
-                    correo = datos.correo,
+                    cedula = datos.cedula.trim(),
+                    primerNombre = datos.primerNombre.trim(),
+                    segundoNombre = datos.segundoNombre.trim(),
+                    primerApellido = datos.primerApellido.trim(),
+                    segundoApellido = datos.segundoApellido.trim(),
+                    correo = datos.correo.trim(),
                     password = datos.password,
-                    telefono = datos.telefono,
-                    fechaNacimiento = datos.fechaNacimiento,
+                    telefono = datos.telefono.trim(),
+                    fechaNacimiento = datos.fechaNacimiento.trim(),
                     discapacidad = datos.discapacidad.ifBlank { null }
                 )
 
-                // Llamada al repositorio
+                // 4. Llamada al repositorio (Específica para Pacientes)
                 val resultado = authRepository.registrarPaciente(paciente)
 
                 resultado.onSuccess {
                     _registroExitoso.value = true
                     _mensaje.value = "Registro exitoso"
                 }.onFailure {
+                    // Manejo de errores que vienen del backend (Ej: "Cédula ya existe")
                     _mensaje.value = it.message ?: "Error al registrar"
                 }
 
             } catch (e: Exception) {
-                _mensaje.value = e.message ?: "Error inesperado"
+                _mensaje.value = e.message ?: "Error inesperado de conexión"
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
+    // Limpiar el estado de éxito para evitar navegaciones repetidas si se vuelve a la pantalla
     fun resetRegistroExitoso() {
         _registroExitoso.value = false
     }

@@ -17,10 +17,9 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
-    // NOTA: Si tienes configurado GoogleSignInClient en tu módulo DI, inyéctalo aquí.
 ) : ViewModel() {
 
-    // --- ESTADOS DE LOS CAMPOS DE TEXTO ---
+    // --- ESTADOS DE UI ---
     private val _email = MutableStateFlow("")
     val email = _email.asStateFlow()
 
@@ -30,7 +29,7 @@ class AuthViewModel @Inject constructor(
     private val _rolActual = MutableStateFlow(RolUsuario.PACIENTE)
     val rolActual = _rolActual.asStateFlow()
 
-    // --- ESTADOS DE LA APP ---
+    // --- ESTADOS DE FLUJO ---
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
@@ -43,6 +42,7 @@ class AuthViewModel @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState = _authState.asStateFlow()
 
+    // Estado específico para guardar los datos de Google temporalmente
     private val _profileIncompleteData = MutableStateFlow<ProfileIncompleteData?>(null)
     val profileIncompleteData = _profileIncompleteData.asStateFlow()
 
@@ -51,10 +51,11 @@ class AuthViewModel @Inject constructor(
     fun onPasswordChange(nuevoPass: String) { _password.value = nuevoPass }
     fun setRol(nuevoRol: RolUsuario) { _rolActual.value = nuevoRol }
 
-    // --- LÓGICA DE LOGIN ---
+    // --- LOGIN CON EMAIL Y PASSWORD ---
     fun login() {
         val mail = _email.value
         val pass = _password.value
+        val rol = _rolActual.value // Capturamos el rol seleccionado
 
         if (mail.isBlank() || pass.isBlank()) {
             _mensajeError.value = "Por favor completa todos los campos"
@@ -64,8 +65,10 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _mensajeError.value = null
+            _authState.value = AuthState.Loading
 
-            val result = authRepository.login(mail, pass)
+            // NOTA: Es recomendable pasar el rol al repositorio para validación
+            val result = authRepository.login(mail, pass, rol)
 
             result.onSuccess {
                 _authState.value = AuthState.Authenticated
@@ -79,10 +82,14 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    // --- NUEVO: RECUPERAR PASSWORD ---
-    fun enviarRecuperacionPassword(email: String, onSuccess: () -> Unit) { // <--- Agregamos onSuccess
+    // --- RECUPERAR PASSWORD ---
+    fun enviarRecuperacionPassword(
+        email: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         if (email.isBlank()) {
-            _mensajeError.value = "Por favor ingresa tu correo electrónico"
+            onError("Por favor ingresa tu correo electrónico")
             return
         }
 
@@ -93,41 +100,67 @@ class AuthViewModel @Inject constructor(
             val result = authRepository.recuperarPassword(email)
 
             result.onSuccess {
-                _mensajeError.value = "Correo enviado. Revisa tu bandeja."
-
-                // --- AQUÍ EJECUTAMOS LA ACCIÓN DE ÉXITO (NAVEGAR) ---
                 onSuccess()
-                // ----------------------------------------------------
-            }.onFailure {
-                _mensajeError.value = it.message ?: "No se pudo enviar el correo"
+            }.onFailure { error ->
+                val msg = error.message ?: "No se pudo enviar el correo"
+                _mensajeError.value = msg
+                onError(msg)
             }
 
             _isLoading.value = false
         }
     }
 
-    // --- COMPLETAR PERFIL ---
-    fun completeProfile(request: CompleteProfileRequest) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val result = authRepository.completarPerfil(request)
-            result.onSuccess {
-                _loginExitoso.value = true
-                _authState.value = AuthState.Authenticated
-            }.onFailure {
-                _mensajeError.value = it.message
-            }
-            _isLoading.value = false
-        }
-    }
+    // --- GOOGLE SIGN IN (Implementado) ---
 
-    // --- GOOGLE SIGN IN (Stub) ---
     fun getGoogleSignInIntent(): Intent {
-        return Intent() // Aquí iría tu lógica real de Google client.signInIntent
+        // Delegamos al repositorio la creación del Intent de Google
+        return authRepository.getGoogleSignInIntent()
     }
 
     fun handleGoogleSignInResult(intent: Intent?) {
-        // Lógica futura
+        viewModelScope.launch {
+            _isLoading.value = true
+            _mensajeError.value = null
+
+            // El repositorio procesa el intent y decide si es login exitoso o perfil incompleto
+            val result = authRepository.loginWithGoogle(intent)
+
+            result.onSuccess { estado ->
+                _authState.value = estado
+
+                // Si el estado es ProfileIncomplete, extraemos los datos para la UI
+                if (estado is AuthState.ProfileIncomplete) {
+                    _profileIncompleteData.value = estado.data
+                } else if (estado is AuthState.Authenticated) {
+                    _loginExitoso.value = true
+                }
+            }.onFailure { error ->
+                _mensajeError.value = error.message ?: "Error al iniciar sesión con Google"
+                _authState.value = AuthState.Error(error.message ?: "Error Google")
+            }
+
+            _isLoading.value = false
+        }
+    }
+
+    // --- COMPLETAR PERFIL (Después de Google) ---
+    fun completeProfile(request: CompleteProfileRequest) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _mensajeError.value = null
+
+            val result = authRepository.completarPerfil(request)
+
+            result.onSuccess {
+                _loginExitoso.value = true
+                _authState.value = AuthState.Authenticated
+                _profileIncompleteData.value = null // Limpiamos datos temporales
+            }.onFailure {
+                _mensajeError.value = it.message ?: "Error al completar perfil"
+            }
+            _isLoading.value = false
+        }
     }
 
     // --- LOGOUT ---
@@ -138,6 +171,7 @@ class AuthViewModel @Inject constructor(
             _loginExitoso.value = false
             _email.value = ""
             _password.value = ""
+            _profileIncompleteData.value = null
         }
     }
 }

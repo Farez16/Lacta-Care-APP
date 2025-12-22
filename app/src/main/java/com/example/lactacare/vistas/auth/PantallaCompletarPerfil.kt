@@ -1,5 +1,6 @@
 package com.example.lactacare.vistas.auth
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,45 +18,46 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.lactacare.datos.dto.GoogleUserData
-import com.example.lactacare.dominio.model.RolUsuario
+import com.example.lactacare.ui.theme.SlateGray
+
+// Colores fijos para Paciente
+val PatientColor = Color(0xFFFFC0CB) // Rosa Pastel
+val PatientColorDark = Color(0xFFF06292) // Rosa más oscuro para textos
+
 
 @Composable
 fun PantallaCompletarPerfil(
-    viewModel: AuthViewModel = viewModel(),
+    viewModel: AuthViewModel = hiltViewModel(),
     googleUserData: GoogleUserData,
-    rolSeleccionado: RolUsuario,
     onPerfilCompletado: () -> Unit,
     onCancelar: () -> Unit
 ) {
+    // --- ESTADOS DEL FORMULARIO ---
     var cedula by remember { mutableStateOf("") }
+
+    // Pre-llenamos con datos que vienen de Google
     var primerNombre by remember { mutableStateOf(googleUserData.givenName ?: "") }
     var segundoNombre by remember { mutableStateOf("") }
     var primerApellido by remember { mutableStateOf(googleUserData.familyName ?: "") }
     var segundoApellido by remember { mutableStateOf("") }
+
     var telefono by remember { mutableStateOf("") }
     var fechaNacimiento by remember { mutableStateOf("") }
     var discapacidad by remember { mutableStateOf("Ninguna") }
-    var codigoCredencial by remember { mutableStateOf("") }
 
+    // --- ESTADOS DEL VIEWMODEL ---
     val isLoading by viewModel.isLoading.collectAsState()
     val mensajeError by viewModel.mensajeError.collectAsState()
     val loginExitoso by viewModel.loginExitoso.collectAsState()
 
-    // Cuando se complete con éxito
+    // --- EFECTOS ---
     LaunchedEffect(loginExitoso) {
         if (loginExitoso) {
             onPerfilCompletado()
         }
-    }
-
-    // Tema según rol
-    val colorPrincipal = when (rolSeleccionado) {
-        RolUsuario.ADMINISTRADOR -> Color(0xFFA3C9A8)
-        RolUsuario.DOCTOR -> Color(0xFFB0C4DE)
-        RolUsuario.PACIENTE -> Color(0xFFFFC0CB)
     }
 
     Scaffold(
@@ -76,20 +78,20 @@ fun PantallaCompletarPerfil(
                 text = "Completa tu Perfil",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF546E7A)
+                color = SlateGray
             )
 
             Text(
-                text = "Registro como ${rolSeleccionado.name}",
+                text = "Registro de Paciente",
                 fontSize = 16.sp,
-                color = colorPrincipal,
+                color = PatientColorDark,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 4.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // IMAGEN DE PERFIL DE GOOGLE
+            // TARJETA DE USUARIO GOOGLE (Visualización)
             if (googleUserData.picture != null) {
                 Card(
                     modifier = Modifier.size(100.dp),
@@ -109,7 +111,7 @@ fun PantallaCompletarPerfil(
                     text = googleUserData.name,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp,
-                    color = Color(0xFF546E7A)
+                    color = SlateGray
                 )
 
                 Text(
@@ -121,11 +123,11 @@ fun PantallaCompletarPerfil(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // INFORMACIÓN IMPORTANTE
+            // INFO CARD
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = colorPrincipal.copy(alpha = 0.1f)
+                    containerColor = PatientColor.copy(alpha = 0.2f)
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -136,18 +138,14 @@ fun PantallaCompletarPerfil(
                     Icon(
                         imageVector = Icons.Outlined.Info,
                         contentDescription = null,
-                        tint = colorPrincipal,
+                        tint = PatientColorDark,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = if (rolSeleccionado != RolUsuario.PACIENTE) {
-                            "Se requiere un código de credenciales para registrarte como ${rolSeleccionado.name}"
-                        } else {
-                            "Completa los siguientes datos para finalizar tu registro"
-                        },
+                        text = "Confirma tus datos personales para brindarte un mejor seguimiento en tu lactancia.",
                         fontSize = 14.sp,
-                        color = Color(0xFF546E7A),
+                        color = SlateGray,
                         lineHeight = 18.sp
                     )
                 }
@@ -155,33 +153,32 @@ fun PantallaCompletarPerfil(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // FORMULARIO
+            // --- FORMULARIO DE DATOS ---
             Text(
                 text = "Datos Personales",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = colorPrincipal,
+                color = PatientColorDark,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             CampoCompletarPerfil(
-                label = "Cédula",
+                label = "Cédula *",
                 valor = cedula,
                 placeholder = "1104567890",
                 icon = Icons.Outlined.Badge,
                 teclado = KeyboardType.Number,
-                colorFocus = colorPrincipal
+                colorFocus = PatientColorDark
             ) { cedula = it }
 
-            // Nombres pre-llenados de Google
             CampoCompletarPerfil(
                 label = "Primer Nombre *",
                 valor = primerNombre,
                 placeholder = "Juan",
                 icon = Icons.Outlined.Person,
-                colorFocus = colorPrincipal
+                colorFocus = PatientColorDark
             ) { primerNombre = it }
 
             CampoCompletarPerfil(
@@ -189,7 +186,7 @@ fun PantallaCompletarPerfil(
                 valor = segundoNombre,
                 placeholder = "Carlos",
                 icon = Icons.Outlined.Person,
-                colorFocus = colorPrincipal
+                colorFocus = PatientColorDark
             ) { segundoNombre = it }
 
             CampoCompletarPerfil(
@@ -197,7 +194,7 @@ fun PantallaCompletarPerfil(
                 valor = primerApellido,
                 placeholder = "Pérez",
                 icon = Icons.Outlined.Person,
-                colorFocus = colorPrincipal
+                colorFocus = PatientColorDark
             ) { primerApellido = it }
 
             CampoCompletarPerfil(
@@ -205,7 +202,7 @@ fun PantallaCompletarPerfil(
                 valor = segundoApellido,
                 placeholder = "Gómez",
                 icon = Icons.Outlined.Person,
-                colorFocus = colorPrincipal
+                colorFocus = PatientColorDark
             ) { segundoApellido = it }
 
             CampoCompletarPerfil(
@@ -214,7 +211,7 @@ fun PantallaCompletarPerfil(
                 placeholder = "0987654321",
                 icon = Icons.Outlined.Phone,
                 teclado = KeyboardType.Phone,
-                colorFocus = colorPrincipal
+                colorFocus = PatientColorDark
             ) { telefono = it }
 
             CampoCompletarPerfil(
@@ -222,42 +219,16 @@ fun PantallaCompletarPerfil(
                 valor = fechaNacimiento,
                 placeholder = "1990-01-15",
                 icon = Icons.Outlined.DateRange,
-                colorFocus = colorPrincipal
+                colorFocus = PatientColorDark
             ) { fechaNacimiento = it }
 
-            // CAMPO DE DISCAPACIDAD (SOLO PACIENTES)
-            if (rolSeleccionado == RolUsuario.PACIENTE) {
-                CampoCompletarPerfil(
-                    label = "Discapacidad (Opcional)",
-                    valor = discapacidad,
-                    placeholder = "Ninguna",
-                    icon = Icons.Outlined.Accessible,
-                    colorFocus = colorPrincipal
-                ) { discapacidad = it }
-            }
-
-            // CÓDIGO DE CREDENCIALES (DOCTOR/ADMIN)
-            if (rolSeleccionado != RolUsuario.PACIENTE) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Credenciales",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorPrincipal,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CampoCompletarPerfil(
-                    label = "Código de Credenciales *",
-                    valor = codigoCredencial,
-                    placeholder = if (rolSeleccionado == RolUsuario.DOCTOR) "DOCTOR2025" else "ADMIN2025",
-                    icon = Icons.Outlined.Key,
-                    colorFocus = colorPrincipal
-                ) { codigoCredencial = it }
-            }
+            CampoCompletarPerfil(
+                label = "Discapacidad (Opcional)",
+                valor = discapacidad,
+                placeholder = "Ninguna",
+                icon = Icons.Outlined.Accessible,
+                colorFocus = PatientColorDark
+            ) { discapacidad = it }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -284,10 +255,8 @@ fun PantallaCompletarPerfil(
                         segundoApellido = segundoApellido.ifEmpty { null },
                         telefono = telefono.ifEmpty { null },
                         fechaNacimiento = fechaNacimiento,
-                        discapacidad = if (rolSeleccionado == RolUsuario.PACIENTE) discapacidad else null,
-                        codigoCredencial = if (rolSeleccionado != RolUsuario.PACIENTE) codigoCredencial else null
+                        discapacidad = discapacidad,
                     )
-
                     viewModel.completeProfile(request)
                 },
                 modifier = Modifier
@@ -295,15 +264,15 @@ fun PantallaCompletarPerfil(
                     .height(55.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = colorPrincipal,
-                    contentColor = if (rolSeleccionado == RolUsuario.PACIENTE) Color(0xFF546E7A) else Color.White
+                    containerColor = PatientColor,
+                    contentColor = SlateGray
                 ),
                 enabled = !isLoading && cedula.isNotEmpty() && primerNombre.isNotEmpty() &&
                         primerApellido.isNotEmpty() && telefono.isNotEmpty() && fechaNacimiento.isNotEmpty()
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        color = Color.White,
+                        color = SlateGray,
                         modifier = Modifier.size(24.dp)
                     )
                 } else {
@@ -321,8 +290,9 @@ fun PantallaCompletarPerfil(
                     .height(55.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = colorPrincipal
-                )
+                    contentColor = SlateGray
+                ),
+                border = BorderStroke(1.dp, SlateGray.copy(alpha = 0.5f))
             ) {
                 Text("Cancelar", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -332,6 +302,7 @@ fun PantallaCompletarPerfil(
     }
 }
 
+// COMPONENTE AUXILIAR
 @Composable
 fun CampoCompletarPerfil(
     label: String,
@@ -346,7 +317,7 @@ fun CampoCompletarPerfil(
         Text(
             text = label,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF546E7A),
+            color = SlateGray,
             fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -361,9 +332,9 @@ fun CampoCompletarPerfil(
                 unfocusedContainerColor = Color.White,
                 focusedBorderColor = colorFocus,
                 unfocusedBorderColor = Color(0xFFE0E0E0),
-                cursorColor = Color(0xFF546E7A),
-                focusedTextColor = Color(0xFF546E7A),
-                unfocusedTextColor = Color(0xFF546E7A)
+                cursorColor = SlateGray,
+                focusedTextColor = SlateGray,
+                unfocusedTextColor = SlateGray
             ),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = teclado),

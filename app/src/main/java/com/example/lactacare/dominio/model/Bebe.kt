@@ -1,9 +1,10 @@
 package com.example.lactacare.dominio.model
 
 data class Bebe(
-    val id: Int,
-    val idFamiliar: Int, // FK a Persona_Paciente
+    val idBebe: Int = 0,
     val nombre: String,
-    val fechaNacimiento: String, // Puedes usar LocalDate si manejas fechas complejas
-    val genero: String
+    val fechaNacimiento: String, // YYYY-MM-DD
+    val peso: Double, // En kilogramos
+    val talla: Double, // En centímetros
+    val idFamiliar: Int // Relación con paciente
 )

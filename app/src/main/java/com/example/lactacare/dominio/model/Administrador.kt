@@ -13,6 +13,4 @@ data class Administrador(
     val fechaNacimiento: String = "",
     val fotoPerfil: String = "",
     val password: String = "",
-    // Específicos
-    val codigoEmpleado: String = "",
 )

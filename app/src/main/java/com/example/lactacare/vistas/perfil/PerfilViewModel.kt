@@ -1,21 +1,23 @@
 package com.example.lactacare.vistas.perfil
 
 import android.content.Context
+import android.net.Uri
+import android.util.Base64
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.lactacare.datos.repository.AuthRepositoryImpl
-import com.example.lactacare.dominio.model.RolUsuario
+import com.example.lactacare.dominio.repository.AuthRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import android.net.Uri
+import javax.inject.Inject
 
 data class PerfilUiState(
     val isLoading: Boolean = false,
-    val nombreCompleto: String = "",
-    val correo: String = "",
+    val primerNombre: String = "",
+    val apellido: String = "", // Para mostrarlo, aunque no se edite
     val imagenPerfil: String? = null,
     val detalles: Map<String, String> = emptyMap(),
     val error: String? = null,
@@ -24,216 +26,114 @@ data class PerfilUiState(
     val cambiosGuardados: Boolean = false
 )
 
-class PerfilViewModel(
-    private val authRepository: AuthRepositoryImpl
+@HiltViewModel
+class PerfilViewModel @Inject constructor(
+    private val authRepository: AuthRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PerfilUiState(isLoading = true))
     val uiState: StateFlow<PerfilUiState> = _uiState.asStateFlow()
 
-    // Campos editables
-    private val _telefono = MutableStateFlow("")
-    val telefono = _telefono.asStateFlow()
+    // Variable temporal para editar el nombre
+    private val _nombreEdit = MutableStateFlow("")
+    val nombreEdit = _nombreEdit.asStateFlow()
 
+    // Variable temporal para la nueva imagen
     private val _nuevaImagenUri = MutableStateFlow<Uri?>(null)
     val nuevaImagenUri = _nuevaImagenUri.asStateFlow()
 
-    /**
-     * Carga el perfil del usuario desde la sesión actual
-     */
-    fun cargarPerfil(rol: RolUsuario) {
+    fun cargarPerfil() {
         viewModelScope.launch {
-            _uiState.value = PerfilUiState(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            try {
-                // Obtener sesión actual
-                val session = authRepository.getCurrentSession()
+            val resultado = authRepository.getUserProfile()
 
-                if (session == null) {
-                    _uiState.value = PerfilUiState(
-                        error = "No hay sesión activa"
-                    )
-                    return@launch
-                }
+            resultado.onSuccess { perfil ->
+                // Inicializamos el campo de edición con el nombre actual
+                _nombreEdit.value = perfil.primerNombre
 
-                // Obtener datos del usuario según el rol
-                when (session.rol) {
-                    RolUsuario.PACIENTE -> {
-                        val paciente = authRepository.obtenerPacientePorId(session.userId.toInt())
-                        if (paciente != null) {
-                            _telefono.value = paciente.telefono
-
-                            _uiState.value = PerfilUiState(
-                                nombreCompleto = "${paciente.primerNombre} ${paciente.primerApellido}",
-                                correo = paciente.correo,
-                                imagenPerfil = paciente.fotoPerfil.takeIf { it.isNotEmpty() },
-                                detalles = buildMap {
-                                    put("Cédula", paciente.cedula)
-                                    if (paciente.telefono.isNotEmpty()) {
-                                        put("Teléfono", paciente.telefono)
-                                    }
-                                    if (paciente.fechaNacimiento.isNotEmpty()) {
-                                        put("Fecha Nacimiento", paciente.fechaNacimiento)
-                                    }
-                                    if (paciente.discapacidad?.isNotEmpty() == true) {
-                                        put("Discapacidad", paciente.discapacidad)
-                                    }
-                                }
-                            )
-                        } else {
-                            _uiState.value = PerfilUiState(
-                                error = "No se pudo cargar el perfil del paciente"
-                            )
-                        }
-                    }
-
-                    RolUsuario.DOCTOR -> {
-                        val medico = authRepository.obtenerMedicoPorId(session.userId.toInt())
-                        if (medico != null) {
-                            _telefono.value = medico.telefono
-
-                            _uiState.value = PerfilUiState(
-                                nombreCompleto = "Dr. ${medico.primerNombre} ${medico.primerApellido}",
-                                correo = medico.correo,
-                                imagenPerfil = medico.fotoPerfil.takeIf { it.isNotEmpty() },
-                                detalles = buildMap {
-                                    if (medico.licenciaMedica.isNotEmpty()) {
-                                        put("Licencia Médica", medico.licenciaMedica)
-                                    }
-                                    put("Cédula", medico.cedula)
-                                    if (medico.telefono.isNotEmpty()) {
-                                        put("Teléfono", medico.telefono)
-                                    }
-                                    if (medico.fechaNacimiento.isNotEmpty()) {
-                                        put("Fecha Nacimiento", medico.fechaNacimiento)
-                                    }
-                                }
-                            )
-                        } else {
-                            _uiState.value = PerfilUiState(
-                                error = "No se pudo cargar el perfil del doctor"
-                            )
-                        }
-                    }
-
-                    RolUsuario.ADMINISTRADOR -> {
-                        val admin = authRepository.obtenerAdminPorId(session.userId.toInt())
-                        if (admin != null) {
-                            _telefono.value = admin.telefono
-
-                            _uiState.value = PerfilUiState(
-                                nombreCompleto = "${admin.primerNombre} ${admin.primerApellido}",
-                                correo = admin.correo,
-                                imagenPerfil = admin.fotoPerfil.takeIf { it.isNotEmpty() },
-                                detalles = buildMap {
-                                    if (admin.codigoEmpleado.isNotEmpty()) {
-                                        put("Código Empleado", admin.codigoEmpleado)
-                                    }
-                                    put("Cédula", admin.cedula)
-                                    if (admin.telefono.isNotEmpty()) {
-                                        put("Teléfono", admin.telefono)
-                                    }
-                                    if (admin.fechaNacimiento.isNotEmpty()) {
-                                        put("Fecha Nacimiento", admin.fechaNacimiento)
-                                    }
-                                }
-                            )
-                        } else {
-                            _uiState.value = PerfilUiState(
-                                error = "No se pudo cargar el perfil del administrador"
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
                 _uiState.value = PerfilUiState(
-                    error = "Error al cargar perfil: ${e.message}"
+                    isLoading = false,
+                    primerNombre = perfil.primerNombre,
+                    apellido = perfil.apellido,
+                    imagenPerfil = perfil.imagen,
+                    // Aquí definimos la lista fija de detalles para TODOS
+                    detalles = mapOf(
+                        "Cédula" to perfil.cedula,
+                        "Fecha Nacimiento" to perfil.fechaNacimiento,
+                        "Rol" to perfil.rol
+                    )
                 )
+            }.onFailure { e ->
+                _uiState.value = PerfilUiState(isLoading = false, error = "Error: ${e.message}")
             }
         }
     }
 
-    /**
-     * Activa el modo edición
-     */
     fun activarEdicion() {
+        // Al activar edición, aseguramos que el texto editable tenga el valor actual
+        _nombreEdit.value = _uiState.value.primerNombre
         _uiState.value = _uiState.value.copy(modoEdicion = true, cambiosGuardados = false)
     }
 
-    /**
-     * Cancela el modo edición
-     */
     fun cancelarEdicion() {
         _uiState.value = _uiState.value.copy(modoEdicion = false)
-        // Recargar datos originales
-        val session = authRepository.getCurrentSession()
-        session?.let { cargarPerfil(it.rol) }
+        _nuevaImagenUri.value = null
+        _nombreEdit.value = _uiState.value.primerNombre // Restaurar nombre original
     }
 
-    /**
-     * Actualiza el teléfono
-     */
-    fun onTelefonoChange(nuevoTelefono: String) {
-        _telefono.value = nuevoTelefono
+    fun onNombreChange(nuevoNombre: String) {
+        _nombreEdit.value = nuevoNombre
     }
 
-    /**
-     * Actualiza la imagen de perfil
-     */
     fun onImagenSeleccionada(uri: Uri?) {
         _nuevaImagenUri.value = uri
     }
 
-    /**
-     * Guarda los cambios del perfil
-     */
     fun guardarCambios() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(guardandoCambios = true)
 
-            try {
-                // TODO: Implementar llamada al backend para actualizar perfil
-                // Por ahora simulamos éxito
-                kotlinx.coroutines.delay(1500)
+            // Convertir imagen a Base64 si existe nueva
+            val imagenBase64 = _nuevaImagenUri.value?.let { uriToBase64(context, it) }
 
+            // Enviamos al backend solo lo que se permite editar: Nombre e Imagen
+            val resultado = authRepository.updateUserProfile(
+                nombre = _nombreEdit.value,
+                imagenBase64 = imagenBase64
+            )
+
+            resultado.onSuccess {
                 _uiState.value = _uiState.value.copy(
                     guardandoCambios = false,
                     modoEdicion = false,
                     cambiosGuardados = true
                 )
-
-                // Recargar perfil
-                val session = authRepository.getCurrentSession()
-                session?.let { cargarPerfil(it.rol) }
-
-            } catch (e: Exception) {
+                _nuevaImagenUri.value = null
+                // Recargamos para ver los cambios confirmados por el servidor
+                cargarPerfil()
+            }.onFailure { e ->
                 _uiState.value = _uiState.value.copy(
                     guardandoCambios = false,
-                    error = "Error al guardar cambios: ${e.message}"
+                    error = "No se pudo guardar: ${e.message}"
                 )
             }
         }
     }
 
-    /**
-     * Limpia el mensaje de éxito
-     */
     fun limpiarMensajeExito() {
         _uiState.value = _uiState.value.copy(cambiosGuardados = false)
     }
 
-    /**
-     * Factory para crear el ViewModel con dependencias
-     */
-    class Factory(private val context: Context) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(PerfilViewModel::class.java)) {
-                return PerfilViewModel(
-                    AuthRepositoryImpl(context)
-                ) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
+    private fun uriToBase64(context: Context, uri: Uri): String? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val bytes = inputStream?.readBytes()
+            inputStream?.close()
+            bytes?.let { Base64.encodeToString(it, Base64.NO_WRAP) }
+        } catch (e: Exception) {
+            null
         }
     }
 }

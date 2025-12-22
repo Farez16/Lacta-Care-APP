@@ -139,7 +139,6 @@ class MainActivity : ComponentActivity() {
 
                             // <--- También convertimos este a Hilt (Asegúrate de ponerle @HiltViewModel a la clase)
                             val viewModel: RegistroPersonaViewModel = hiltViewModel()
-                            viewModel.setRol(rolEnum)
 
                             PantallaRegistroPersona(
                                 viewModel = viewModel,

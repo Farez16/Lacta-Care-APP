@@ -1,9 +1,15 @@
 package com.example.lactacare.di
 
+import android.content.Context
+import com.example.lactacare.R
 import com.example.lactacare.datos.network.AuthApiService
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -16,30 +22,30 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // IMPORTANTE:
-    // Usa "10.0.2.2" si corres la app en el Emulador de Android Studio.
-    // Usa tu IP local (ej. "192.168.1.50") si usas un celular físico conectado por USB.
-    private const val BASE_URL = "http://10.0.2.2:8080/api/"
-
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
-        // Esto permite ver el JSON que envías y recibes en el Logcat (pestaña Logcat abajo)
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         return OkHttpClient.Builder()
             .addInterceptor(logging)
-            .connectTimeout(30, TimeUnit.SECONDS) // Tiempo espera conexión
-            .readTimeout(30, TimeUnit.SECONDS)    // Tiempo espera respuesta
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideRetrofit(
+        okHttpClient: OkHttpClient,
+        @ApplicationContext context: Context // Inyectamos contexto para leer strings.xml
+    ): Retrofit {
+        // Usamos la URL definida en res/values/strings.xml
+        val baseUrl = context.getString(R.string.backend_url)
+
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -49,5 +55,19 @@ object NetworkModule {
     @Singleton
     fun provideAuthApiService(retrofit: Retrofit): AuthApiService {
         return retrofit.create(AuthApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGoogleSignInClient(@ApplicationContext context: Context): GoogleSignInClient {
+        // RECUERDA: Cambia esto por tu Client ID real si no lo has hecho
+        val webClientId = context.getString(R.string.web_client_id)
+
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .build()
+
+        return GoogleSignIn.getClient(context, gso)
     }
 }

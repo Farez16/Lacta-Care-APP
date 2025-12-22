@@ -18,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -29,11 +28,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.ZoneOffset
+import androidx.hilt.navigation.compose.hiltViewModel
 
 // --- COLORES ESTILO CLEAN ---
 val TextoOscuroClean = Color(0xFF546E7A)
@@ -43,9 +42,7 @@ val FondoBlancoClean = Color(0xFFFEFEFE)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaRegistroPersona(
-    viewModel: RegistroPersonaViewModel = viewModel(
-        factory = RegistroPersonaViewModel.Factory(LocalContext.current)
-    ),
+    viewModel: RegistroPersonaViewModel = hiltViewModel(), // Usamos hiltViewModel()
     onIrALogin: () -> Unit
 ) {
     // Datos del ViewModel
@@ -58,14 +55,14 @@ fun PantallaRegistroPersona(
     // --- COLOR FIJO PARA PACIENTE (Rosado Suave) ---
     val colorPrincipal = Color(0xFFFFC0CB)
 
-    // --- ESTADOS DEL CALENDARIO ---
+    // --- LÓGICA DE FECHAS SEGURA ---
     var mostrarCalendario by remember { mutableStateOf(false) }
     var errorEdad by remember { mutableStateOf<String?>(null) }
 
     // Fecha máxima permitida (hoy - 18 años)
-    val fechaMaxima = remember {
+    val fechaMaximaMillis = remember {
         LocalDate.now().minusYears(18)
-            .atStartOfDay(ZoneId.systemDefault())
+            .atStartOfDay(ZoneOffset.UTC) // Usamos UTC para el DatePicker
             .toInstant()
             .toEpochMilli()
     }
@@ -74,32 +71,34 @@ fun PantallaRegistroPersona(
         initialSelectedDateMillis = datos.fechaNacimiento.takeIf { it.isNotBlank() }?.let {
             try {
                 LocalDate.parse(it)
-                    .atStartOfDay(ZoneId.systemDefault())
+                    .atStartOfDay(ZoneOffset.UTC)
                     .toInstant()
                     .toEpochMilli()
-            } catch (e: Exception) { fechaMaxima }
-        } ?: fechaMaxima,
+            } catch (e: Exception) { fechaMaximaMillis }
+        } ?: fechaMaximaMillis,
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                return utcTimeMillis <= fechaMaxima
+                return utcTimeMillis <= fechaMaximaMillis
             }
         }
     )
 
+    // Diálogo del Calendario
     if (mostrarCalendario) {
         DatePickerDialog(
             onDismissRequest = { mostrarCalendario = false },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
+                        // Convertimos usando UTC para evitar desfases horarios
                         val fechaSeleccionada = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneId.systemDefault())
+                            .atZone(ZoneOffset.UTC)
                             .toLocalDate()
 
                         if (esMayorDeEdad(fechaSeleccionada)) {
-                            val formato = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                            // Guardamos en formato String estándar ISO
                             viewModel.onFechaNacimientoChange(
-                                fechaSeleccionada.format(formato)
+                                fechaSeleccionada.format(DateTimeFormatter.ISO_LOCAL_DATE)
                             )
                             errorEdad = null
                             mostrarCalendario = false
@@ -108,23 +107,33 @@ fun PantallaRegistroPersona(
                         }
                     }
                 }) {
-                    Text("OK", color = colorPrincipal)
+                    Text("OK", color = colorPrincipal, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { mostrarCalendario = false }) {
                     Text("Cancelar", color = TextoOscuroClean)
                 }
-            }
+            },
+            colors = DatePickerDefaults.colors(
+                containerColor = FondoBlancoClean,
+                selectedDayContainerColor = colorPrincipal,
+                todayDateBorderColor = colorPrincipal,
+                todayContentColor = colorPrincipal
+            )
         ) {
             DatePicker(state = datePickerState)
         }
     }
 
+    // Navegación al éxito
     LaunchedEffect(registroExitoso) {
         if (registroExitoso) {
+            // Pequeña pausa para que el usuario vea el mensaje de éxito
             kotlinx.coroutines.delay(1000)
             onIrALogin()
+            // Reseteamos el estado para que no vuelva a navegar si regresa
+            viewModel.resetRegistroExitoso()
         }
     }
 
@@ -141,14 +150,14 @@ fun PantallaRegistroPersona(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            // TÍTULO FIJO
+            // TÍTULO
             Text(
                 text = "Crear Cuenta",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextoOscuroClean
             )
-            // SUBTÍTULO FIJO CON ICONO DE BEBÉ
+            // SUBTÍTULO
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 4.dp)
@@ -170,7 +179,7 @@ fun PantallaRegistroPersona(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // SWITCH (Registrarse Activo)
+            // SWITCH (Login / Registro)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -204,6 +213,7 @@ fun PantallaRegistroPersona(
 
             Spacer(modifier = Modifier.height(30.dp))
 
+            // --- FORMULARIO ---
             SeccionFormulario("Datos Personales", colorPrincipal)
 
             CampoRegistroClean(label = "Cédula / DNI", valor = datos.cedula, placeholder = "110...", icon = Icons.Outlined.Badge, teclado = KeyboardType.Number, colorFocus = colorPrincipal) { viewModel.onCedulaChange(it) }
@@ -240,7 +250,7 @@ fun PantallaRegistroPersona(
                         text = errorEdad!!,
                         color = Color.Red,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                     )
                 }
             }
@@ -249,7 +259,6 @@ fun PantallaRegistroPersona(
             HorizontalDivider(color = BordeGrisClean)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // SOLO MOSTRAMOS SECCIÓN DE INFORMACIÓN ADICIONAL (DISCAPACIDAD)
             SeccionFormulario("Información Adicional", colorPrincipal)
             CampoRegistroClean(label = "Discapacidad (Opcional)", valor = datos.discapacidad, placeholder = "Detalle si aplica", icon = Icons.Outlined.Accessible, colorFocus = colorPrincipal) { viewModel.onDiscapacidadChange(it) }
 
@@ -263,6 +272,7 @@ fun PantallaRegistroPersona(
 
             CampoRegistroClean(label = "Teléfono", valor = datos.telefono, placeholder = "0987654321", icon = Icons.Outlined.Phone, teclado = KeyboardType.Phone, colorFocus = colorPrincipal) { viewModel.onTelefonoChange(it) }
 
+            // CAMPO CONTRASEÑA
             Text(
                 text = "Contraseña",
                 fontWeight = FontWeight.SemiBold,
@@ -277,6 +287,8 @@ fun PantallaRegistroPersona(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
                 colors = inputColorsClean(colorPrincipal),
+                // CORRECCIÓN: Configuración correcta de teclado para password
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 trailingIcon = {
@@ -289,10 +301,11 @@ fun PantallaRegistroPersona(
 
             Spacer(modifier = Modifier.height(30.dp))
 
+            // MENSAJE FEEDBACK
             if (mensaje != null) {
                 Text(
                     text = mensaje ?: "",
-                    color = if (registroExitoso) colorPrincipal else Color.Red,
+                    color = if (registroExitoso) Color(0xFF4CAF50) else Color.Red, // Verde si éxito, Rojo si error
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
                     fontWeight = if (registroExitoso) FontWeight.Bold else FontWeight.Normal,
@@ -300,6 +313,7 @@ fun PantallaRegistroPersona(
                 )
             }
 
+            // BOTÓN REGISTRAR
             Button(
                 onClick = { viewModel.registrar() },
                 modifier = Modifier
@@ -308,7 +322,7 @@ fun PantallaRegistroPersona(
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colorPrincipal,
-                    contentColor = TextoOscuroClean // Texto oscuro para contrastar con el rosado claro
+                    contentColor = TextoOscuroClean
                 ),
                 enabled = !cargando
             ) {
@@ -318,6 +332,7 @@ fun PantallaRegistroPersona(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // FOOTER LEGAL
             val textoLegal = buildAnnotatedString {
                 append("Al registrarte aceptas los ")
                 withStyle(SpanStyle(color = colorPrincipal, fontWeight = FontWeight.Bold)) { append("Términos") }
@@ -330,6 +345,8 @@ fun PantallaRegistroPersona(
         }
     }
 }
+
+// --- FUNCIONES AUXILIARES ---
 
 fun esMayorDeEdad(fechaNacimiento: LocalDate): Boolean {
     val hoy = LocalDate.now()
@@ -357,6 +374,7 @@ fun CampoRegistroCleanReadOnly(
     colorFocus: Color,
     onClick: () -> Unit
 ) {
+    // Usamos el modificador clickable en la columna, pero deshabilitamos el textfield para que no abra teclado
     Column(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Text(
             text = label,
@@ -369,7 +387,7 @@ fun CampoRegistroCleanReadOnly(
             value = valor,
             onValueChange = {},
             readOnly = true,
-            enabled = false,
+            enabled = false, // Deshabilitado para que el click lo capture la Column
             placeholder = { Text(placeholder, color = TextoOscuroClean.copy(alpha = 0.4f)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
@@ -378,10 +396,11 @@ fun CampoRegistroCleanReadOnly(
                 disabledTextColor = TextoOscuroClean,
                 disabledPlaceholderColor = TextoOscuroClean.copy(alpha = 0.4f),
                 disabledTrailingIconColor = colorFocus,
-                disabledLabelColor = TextoOscuroClean
+                disabledLabelColor = TextoOscuroClean,
+                disabledContainerColor = Color.White // Mantener fondo blanco aunque esté disabled
             ),
             singleLine = true,
-            trailingIcon = { Icon(icon, contentDescription = null) }
+            trailingIcon = { Icon(icon, contentDescription = null, tint = colorFocus) }
         )
         Spacer(modifier = Modifier.height(16.dp))
     }

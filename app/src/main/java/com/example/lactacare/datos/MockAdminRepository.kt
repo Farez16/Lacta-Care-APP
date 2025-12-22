@@ -24,8 +24,7 @@ class MockAdminRepository : AdminRepository {
             primerNombre = "Ana",
             primerApellido = "Gomez",
             correo = "admin@sistema.com",
-            // departamento = "Tecnología",  <-- ¡ESTA ERA LA LÍNEA QUE CAUSABA EL ERROR! (BORRADA)
-            codigoEmpleado = "ADM-2025",
+
             fotoPerfil = ""
         )
     }

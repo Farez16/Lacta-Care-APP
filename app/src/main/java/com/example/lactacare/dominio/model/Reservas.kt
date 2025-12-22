@@ -1,11 +1,11 @@
 package com.example.lactacare.dominio.model
 
 data class Reservas(
-    val id: Int,
-    val idLactario: Int,
+    val idReserva: Int = 0,
     val idPaciente: Int,
-    val estado: String, // "Pendiente", "Confirmada", etc.
-    val fecha: String,  // Mapea a DATE
-    val horaInicio: String, // Mapea a TIME
-    val horaFin: String
+    val idLactario: Int,
+    val fecha: String, // YYYY-MM-DD
+    val horaInicio: String, // HH:mm
+    val horaFin: String, // HH:mm
+    val estado: String = "ACTIVA" // ACTIVA, COMPLETADA, CANCELADA
 )
