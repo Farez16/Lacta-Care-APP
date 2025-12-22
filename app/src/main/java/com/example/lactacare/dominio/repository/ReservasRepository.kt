@@ -10,5 +10,5 @@ interface ReservasRepository {
     suspend fun obtenerProximaReservaPaciente(idPaciente: Int): Reservas?
 
     // Función para el Doctor (Agenda) - ¡Necesaria para la pantalla de Agenda!
-    suspend fun obtenerReservasPorMedico(idMedico: Int): List<Reservas>
+    suspend fun obtenerReservasPorMedico(idMedico: Int): List<Reservas> //
 }
