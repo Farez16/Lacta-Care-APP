@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,6 +23,11 @@ import com.example.lactacare.vistas.theme.*
 fun PantallaHome(
     rolUsuario: RolUsuario,
     onLogout: () -> Unit,
+    // --- CORRECCIÓN: Agregamos estos parámetros para que MainActivity no falle ---
+    onNavReservas: () -> Unit = {},
+    onNavBebe: () -> Unit = {},
+    onNavInfo: () -> Unit = {},
+    // --------------------------------------------------------------------------
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
@@ -29,7 +35,7 @@ fun PantallaHome(
     // Determinar menú y colores según rol
     val (itemsMenu, colorPrincipal) = when (rolUsuario) {
         RolUsuario.PACIENTE -> Pair(menuPaciente, MomPrimary)
-        RolUsuario.DOCTOR -> Pair(menuAdmin, DoctorPrimary) // Usamos menú admin por ahora para doc
+        RolUsuario.DOCTOR -> Pair(menuAdmin, DoctorPrimary)
         RolUsuario.ADMINISTRADOR -> Pair(menuAdmin, AdminPrimary)
     }
 
@@ -37,10 +43,12 @@ fun PantallaHome(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // Obtenemos el estado del ViewModel (nombre usuario, etc)
+    val uiState by viewModel.uiState.collectAsState()
+
     Scaffold(
-        containerColor = Color(0xFFFAFAFA), // Tu color de fondo original
+        containerColor = Color(0xFFFAFAFA),
         bottomBar = {
-            // USAMOS TU BARRA FLOTANTE PERSONALIZADA
             BottomNavBarFlotante(
                 items = itemsMenu,
                 rutaActual = currentRoute,
@@ -60,18 +68,23 @@ fun PantallaHome(
 
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
 
-            // CONTENIDO CAMBIANTE
             NavHost(
                 navController = navController,
                 startDestination = itemsMenu.first().ruta
             ) {
                 // --- RUTAS PACIENTE ---
                 composable(ItemMenu.PacienteInicio.ruta) {
-                    // Aquí llamamos a tu TopBar + Dashboard
                     Column {
-                        TopBarHome(saludo = "Mamá", colorIcono = colorPrincipal)
+                        // Usamos el nombre real que viene del ViewModel
+                        TopBarHome(saludo = uiState.nombreUsuario, colorIcono = colorPrincipal)
+
+                        // Aquí iría tu DashboardPaciente real. Por ahora un placeholder.
                         PantallaEnConstruccion("Dashboard Paciente")
-                        // Aquí iría tu DashboardStatCard cuando tengamos datos
+
+                        // Ejemplo: Botón temporal para probar navegación a Reservas
+                        Button(onClick = onNavReservas, modifier = Modifier.padding(16.dp)) {
+                            Text("Ir a Reservas (Prueba)")
+                        }
                     }
                 }
                 composable(ItemMenu.PacienteBebe.ruta) { PantallaEnConstruccion("Mi Bebé") }
@@ -80,10 +93,10 @@ fun PantallaHome(
                     BotonCerrarSesion(onLogout, viewModel)
                 }
 
-                // --- RUTAS ADMIN ---
+                // --- RUTAS ADMIN / DOCTOR ---
                 composable(ItemMenu.AdminDashboard.ruta) {
                     Column {
-                        TopBarHome(saludo = "Admin", colorIcono = colorPrincipal)
+                        TopBarHome(saludo = uiState.nombreUsuario, colorIcono = colorPrincipal)
                         PantallaEnConstruccion("Dashboard Admin")
                     }
                 }
