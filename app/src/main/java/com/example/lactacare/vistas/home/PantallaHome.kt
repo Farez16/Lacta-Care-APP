@@ -1,136 +1,110 @@
 package com.example.lactacare.vistas.home
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.lactacare.datos.*
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.lactacare.dominio.model.RolUsuario
-import com.example.lactacare.vistas.chat.PantallaChat
-import com.example.lactacare.vistas.inventario.PantallaInventario
-import com.example.lactacare.vistas.perfil.PantallaPerfil
-import com.example.lactacare.vistas.theme.AdminBackground
-import com.example.lactacare.vistas.theme.AdminPrimary
-import com.example.lactacare.vistas.theme.DoctorBackground
-import com.example.lactacare.vistas.theme.DoctorPrimary
-import com.example.lactacare.vistas.theme.MomAccent
-import com.example.lactacare.vistas.theme.MomPrimary
-import com.example.lactacare.vistas.theme.TextoOscuroClean
+import com.example.lactacare.vistas.navegacion.*
+import com.example.lactacare.vistas.theme.*
 
 @Composable
 fun PantallaHome(
     rolUsuario: RolUsuario,
     onLogout: () -> Unit,
-    // --- CORRECCIÓN AQUÍ ---
-    // Renombrado de 'onNavegarANuevaReserva' a 'onNavReservas' para coincidir con MainActivity
-    onNavReservas: () -> Unit = {},
-    onNavegarADetalleReserva: () -> Unit = {},
-    onNavBebe: () -> Unit = {},
-    onNavInfo: (String) -> Unit = {},
-
-    viewModel: HomeViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return HomeViewModel(
-                    pacienteRepo = MockPacienteRepository(),
-                    medicoRepo = MockMedicoRepository(),
-                    adminRepo = MockAdminRepository(),
-                    reservaRepo = MockReservasRepository(),
-                    bebeRepo = MockBebeRepository()
-                ) as T
-            }
-        }
-    )
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(rolUsuario) { viewModel.setRol(rolUsuario) }
+    val navController = rememberNavController()
 
-    val seccionActual by viewModel.seccionActual.collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
-
-    val (colorPrincipal, colorAcento) = when (rolUsuario) {
-        RolUsuario.PACIENTE -> Pair(MomPrimary, MomAccent)
-        RolUsuario.DOCTOR -> Pair(DoctorPrimary, DoctorBackground)
-        RolUsuario.ADMINISTRADOR -> Pair(AdminPrimary, AdminBackground)
+    // Determinar menú y colores según rol
+    val (itemsMenu, colorPrincipal) = when (rolUsuario) {
+        RolUsuario.PACIENTE -> Pair(menuPaciente, MomPrimary)
+        RolUsuario.DOCTOR -> Pair(menuAdmin, DoctorPrimary) // Usamos menú admin por ahora para doc
+        RolUsuario.ADMINISTRADOR -> Pair(menuAdmin, AdminPrimary)
     }
 
-    val menuItems = viewModel.obtenerMenuPorRol(rolUsuario)
+    // Estado para saber en qué ruta estamos
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
-        containerColor = Color(0xFFFAFAFA),
+        containerColor = Color(0xFFFAFAFA), // Tu color de fondo original
         bottomBar = {
+            // USAMOS TU BARRA FLOTANTE PERSONALIZADA
             BottomNavBarFlotante(
-                items = menuItems,
-                seccionActual = seccionActual,
+                items = itemsMenu,
+                rutaActual = currentRoute,
                 colorActivo = colorPrincipal,
-                onItemClick = { viewModel.seleccionarSeccion(it) }
-            )
-        }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-
-            // TopBar dinámica
-            if (seccionActual.id == "inicio") {
-                TopBarHome(saludo = uiState.nombreUsuario, colorIcono = TextoOscuroClean)
-            }
-
-            Box(modifier = Modifier.weight(1f)) {
-                when (seccionActual.id) {
-                    // 1. DASHBOARD PRINCIPAL (Inicio)
-                    "inicio" -> {
-                        when (rolUsuario) {
-                            RolUsuario.PACIENTE -> DashboardPaciente(
-                                colorPrimary = colorPrincipal,
-                                colorAccent = colorAcento,
-                                nombreUsuario = uiState.nombreUsuario,
-                                proximaCita = uiState.proximaReserva,
-                                nombreBebe = uiState.nombreBebe,
-                                // Pasamos el parámetro corregido aquí:
-                                onNavReservas = onNavReservas,
-                                onNavBebe = onNavBebe,
-                                onNavInfo = onNavInfo
-                            )
-
-                            RolUsuario.DOCTOR -> DashboardDoctor(colorPrincipal, colorAcento)
-
-                            RolUsuario.ADMINISTRADOR -> DashboardAdmin(
-                                colorPrincipal = colorPrincipal,
-                                colorAcento = colorAcento,
-                                stats = uiState.datosAdmin,
-                                onNavGestion = { viewModel.seleccionarSeccion(com.example.lactacare.vistas.navegacion.ItemMenu.Lactarios) },
-                                onNavReportes = { /* Acción futura */ }
-                            )
+                onItemClick = { item ->
+                    navController.navigate(item.ruta) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
                         }
-                    }
-
-                    // 2. SECCIONES DE ADMIN
-                    "Lactarios" -> {
-                        // Asegúrate de tener importada esta pantalla o usa la ruta completa si no la has movido
-                        com.example.lactacare.vistas.admin.PantallaGestionLactarios(
-                            onVolver = { viewModel.seleccionarSeccion(com.example.lactacare.vistas.navegacion.ItemMenu.Inicio) }
-                        )
-                    }
-
-                    "empleados" -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Pantalla Gestión de Empleados", color = Color.Gray)
-                        }
-                    }
-
-                    // 3. SECCIONES COMUNES
-                    "chatbot" -> PantallaChat()
-                    "registros" -> PantallaInventario()
-                    "perfil" -> PantallaPerfil(rolUsuario = rolUsuario, onLogout = onLogout)
-
-                    else -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("En construcción: ${seccionActual.titulo}")
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 }
+            )
+        }
+    ) { paddingValues ->
+
+        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+
+            // CONTENIDO CAMBIANTE
+            NavHost(
+                navController = navController,
+                startDestination = itemsMenu.first().ruta
+            ) {
+                // --- RUTAS PACIENTE ---
+                composable(ItemMenu.PacienteInicio.ruta) {
+                    // Aquí llamamos a tu TopBar + Dashboard
+                    Column {
+                        TopBarHome(saludo = "Mamá", colorIcono = colorPrincipal)
+                        PantallaEnConstruccion("Dashboard Paciente")
+                        // Aquí iría tu DashboardStatCard cuando tengamos datos
+                    }
+                }
+                composable(ItemMenu.PacienteBebe.ruta) { PantallaEnConstruccion("Mi Bebé") }
+                composable(ItemMenu.PacienteChat.ruta) { PantallaEnConstruccion("Chat IA") }
+                composable(ItemMenu.PacientePerfil.ruta) {
+                    BotonCerrarSesion(onLogout, viewModel)
+                }
+
+                // --- RUTAS ADMIN ---
+                composable(ItemMenu.AdminDashboard.ruta) {
+                    Column {
+                        TopBarHome(saludo = "Admin", colorIcono = colorPrincipal)
+                        PantallaEnConstruccion("Dashboard Admin")
+                    }
+                }
+                composable(ItemMenu.AdminInventario.ruta) { PantallaEnConstruccion("Inventario") }
+                composable(ItemMenu.AdminLactarios.ruta) { PantallaEnConstruccion("Lactarios") }
+                composable(ItemMenu.AdminPerfil.ruta) {
+                    BotonCerrarSesion(onLogout, viewModel)
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun BotonCerrarSesion(onLogout: () -> Unit, viewModel: HomeViewModel) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        Button(onClick = {
+            viewModel.cerrarSesion()
+            onLogout()
+        }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+            Text("Cerrar Sesión")
         }
     }
 }

@@ -20,29 +20,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.lactacare.dominio.model.RolUsuario
 import com.example.lactacare.datos.dto.AuthState
-import com.example.lactacare.ui.theme.SlateGray
-
-// --- COLORES DEFINIDOS ---
-val SlateGray = Color(0xFF546E7A)
-val LightGray = Color(0xFFE0E0E0)
-val OffWhite = Color(0xFFFEFEFE)
-val White = Color.White
+import com.example.lactacare.dominio.model.RolUsuario
+// IMPORTAMOS TUS COLORES DEFINIDOS EN EL TEMA
+import com.example.lactacare.vistas.theme.*
 
 @Composable
 fun PantallaLogin(
@@ -51,21 +40,19 @@ fun PantallaLogin(
     onLoginExitoso: () -> Unit,
     onIrARecuperarPassword: () -> Unit
 ) {
-    // 1. OBSERVABLES DEL VIEWMODEL
+    // 1. OBSERVABLES
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.mensajeError.collectAsState()
-    val loginExitoso by viewModel.loginExitoso.collectAsState()
     val rol by viewModel.rolActual.collectAsState()
     val authState by viewModel.authState.collectAsState()
     val profileIncompleteData by viewModel.profileIncompleteData.collectAsState()
 
-    // 2. ESTADOS LOCALES DE LA UI
     var passwordVisible by remember { mutableStateOf(false) }
     var showCompletarPerfil by remember { mutableStateOf(false) }
 
-    // 3. LAUNCHER DE GOOGLE
+    // 2. GOOGLE LAUNCHER
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -74,29 +61,16 @@ fun PantallaLogin(
         }
     }
 
-    // 4. EFECTOS (Side Effects)
-
-    // Manejo de estados de autenticación (Éxito o Perfil Incompleto)
+    // 3. EFECTO DE NAVEGACIÓN
     LaunchedEffect(authState) {
         when (authState) {
-            is AuthState.Authenticated -> {
-                onLoginExitoso()
-            }
-            is AuthState.ProfileIncomplete -> {
-                showCompletarPerfil = true
-            }
+            is AuthState.Authenticated -> onLoginExitoso()
+            is AuthState.ProfileIncomplete -> showCompletarPerfil = true
             else -> {}
         }
     }
 
-    // Manejo simple de éxito (Legacy)
-    LaunchedEffect(loginExitoso) {
-        if (loginExitoso) {
-            onLoginExitoso()
-        }
-    }
-
-    // Si falta completar perfil (Ej. Google nuevo), mostramos esa pantalla encima
+    // 4. MANEJO DE PERFIL INCOMPLETO (GOOGLE)
     if (showCompletarPerfil && profileIncompleteData != null) {
         PantallaCompletarPerfil(
             viewModel = viewModel,
@@ -110,225 +84,169 @@ fun PantallaLogin(
                 viewModel.logout()
             }
         )
-        return // IMPORTANTE: Cortamos aquí para no dibujar el Login debajo
+        return
     }
 
-    // 5. CONFIGURACIÓN VISUAL SEGÚN ROL (THEMING)
-    data class TemaRol(
+    // 5. CONFIGURACIÓN VISUAL SEGÚN ROL (USANDO COLOR.KT)
+    // Definimos una clase de datos temporal para organizar los colores
+    data class TemaVisual(
         val titulo: String,
         val icono: ImageVector,
-        val colorPrincipal: Color,
-        val colorAcento: Color,
-        val colorIcono: Color,
-        val colorFondoPantalla: Color = OffWhite
+        val colorPrimario: Color, // Botones, Focus
+        val colorFondo: Color,    // Scaffold
+        val colorIconoBg: Color,  // Fondo del cuadro del icono
+        val colorTexto: Color     // Títulos
     )
 
     val tema = when (rol) {
-        RolUsuario.ADMINISTRADOR -> TemaRol(
-            titulo = "Portal Administrativo",
-            icono = Icons.Default.Apartment,
-            colorPrincipal = Color(0xFFA3C9A8),
-            colorAcento = Color(0xFFA3C9A8).copy(alpha = 0.3f),
-            colorIcono = Color(0xFF2E7D32)
+        RolUsuario.PACIENTE -> TemaVisual(
+            titulo = "Bienvenida",
+            icono = Icons.Default.ChildCare,
+            colorPrimario = MomPrimary,      // Rosado #FFC0CB
+            colorFondo = MomBackground,      // Blanco Rosado #FFF9FB
+            colorIconoBg = MomAccent,        // Rosado Claro #FFDDE2
+            colorTexto = SlateGray           // Gris Oscuro
         )
-        RolUsuario.DOCTOR -> TemaRol(
+        RolUsuario.DOCTOR -> TemaVisual(
             titulo = "Portal Médicos",
             icono = Icons.Default.HealthAndSafety,
-            colorPrincipal = Color(0xFFB0C4DE),
-            colorAcento = Color(0xFFB0C4DE).copy(alpha = 0.3f),
-            colorIcono = Color(0xFF1565C0)
+            colorPrimario = DoctorPrimary,   // Azul #42A5F5
+            colorFondo = DoctorBackground,   // Azul Suave #E3F2FD
+            colorIconoBg = Color(0xFFBBDEFB),// Azul intermedio para el icono
+            colorTexto = SlateGray
         )
-        RolUsuario.PACIENTE -> TemaRol(
-            titulo = "Bienvenido",
-            icono = Icons.Default.ChildCare,
-            colorPrincipal = Color(0xFFFFC0CB),
-            colorAcento = Color(0xFFFFDDE2),
-            colorIcono = SlateGray
+        RolUsuario.ADMINISTRADOR -> TemaVisual(
+            titulo = "Administración",
+            icono = Icons.Default.Apartment,
+            colorPrimario = AdminPrimary,    // Verde #66BB6A
+            colorFondo = AdminBackground,    // Verde Suave #E8F5E9
+            colorIconoBg = Color(0xFFC8E6C9),// Verde intermedio
+            colorTexto = SlateGray
         )
     }
 
-    // 6. ESTRUCTURA DE LA PANTALLA
-    Scaffold(
-        containerColor = tema.colorFondoPantalla
-    ) { padding ->
+    // 6. UI PRINCIPAL
+    Scaffold(containerColor = tema.colorFondo) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            // -- HEADER --
+            // Título Principal
             Text(
                 text = "LactaCare",
-                fontSize = 36.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                color = SlateGray,
-                modifier = Modifier.padding(bottom = 8.dp)
+                color = tema.colorTexto
             )
 
-            // Icono Central Dinámico
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Icono Central con Color Dinámico
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp, vertical = 8.dp)
-                    .aspectRatio(1f)
-                    .background(tema.colorAcento, shape = RoundedCornerShape(16.dp)),
+                    .size(120.dp)
+                    .background(tema.colorIconoBg, shape = RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = tema.icono,
                     contentDescription = null,
-                    modifier = Modifier.size(120.dp),
-                    tint = tema.colorIcono
+                    modifier = Modifier.size(70.dp),
+                    tint = tema.colorPrimario // El icono toma el color fuerte
                 )
             }
 
-            // Título Dinámico
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Subtítulo (Portal Médico, etc)
             Text(
                 text = tema.titulo,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = SlateGray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 0.dp, bottom = 8.dp)
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = tema.colorTexto
             )
 
-            Text(
-                text = "Cuidado inteligente, lactancia tranquila.",
-                fontSize = 16.sp,
-                color = SlateGray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // -- SWITCH LOGIN/REGISTRO (SOLO PACIENTES) --
-            if (rol == RolUsuario.PACIENTE) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(LightGray.copy(alpha = 0.5f))
-                        .padding(4.dp)
-                ) {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        // Opción Login (Activa)
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .shadow(1.dp, RoundedCornerShape(8.dp))
-                                .background(White, RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Iniciar Sesión", fontWeight = FontWeight.SemiBold, color = SlateGray)
-                        }
-                        // Opción Registro (Navegable)
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clickable { onIrARegistro(rol) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "Registrarse",
-                                fontWeight = FontWeight.SemiBold,
-                                color = SlateGray.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            } else {
-                // Espacio extra para Doctores/Admins que no tienen el switch
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+            // -- CAMPOS DE TEXTO --
 
-
-            // -- FORMULARIO DE LOGIN --
-
-            // Campo Email
-            CampoLoginHtml(
-                label = "Email",
+            // Email
+            CampoTextoLogin(
+                label = "Correo Electrónico",
                 valor = email,
-                placeholder = "tu.email@ejemplo.com",
-                onChange = { viewModel.onEmailChange(it) },
-                colorFocus = tema.colorPrincipal
+                placeholder = "ejemplo@correo.com",
+                colorFocus = tema.colorPrimario,
+                onCambio = { viewModel.onEmailChange(it) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo Password
+            // Contraseña
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Contraseña",
                     fontWeight = FontWeight.SemiBold,
                     color = SlateGray,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
                     value = password,
                     onValueChange = { viewModel.onPasswordChange(it) },
-                    placeholder = { Text("Tu contraseña", color = SlateGray.copy(alpha = 0.5f)) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = inputHtmlColors(tema.colorPrincipal),
-                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = tema.colorPrimario,
+                        unfocusedBorderColor = BordeGrisClean,
+                        focusedContainerColor = White,
+                        unfocusedContainerColor = White
+                    ),
                     trailingIcon = {
                         val icon = if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(icon, contentDescription = null, tint = SlateGray.copy(alpha = 0.5f))
+                            Icon(icon, contentDescription = null, tint = SlateGray)
                         }
-                    }
+                    },
+                    singleLine = true
                 )
             }
 
-            // Recuperar Contraseña
+            // Recuperar Contraseña (Link)
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                Text(
-                    text = "¿Olvidaste tu contraseña?",
-                    color = tema.colorPrincipal,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .clickable { onIrARecuperarPassword() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Mensajes de Error
-            if (error != null) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                ) {
-                    Text(
-                        error!!,
-                        color = Color(0xFFC62828),
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(16.dp),
-                        lineHeight = 18.sp
-                    )
+                TextButton(onClick = onIrARecuperarPassword) {
+                    Text("¿Olvidaste tu contraseña?", color = SlateGray, fontSize = 12.sp)
                 }
             }
 
-            // BOTÓN INICIAR SESIÓN
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // MENSAJE DE ERROR
+            if (error != null) {
+                Text(
+                    text = error ?: "",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
+            // BOTÓN LOGIN
             Button(
                 onClick = { viewModel.login() },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = tema.colorPrincipal,
-                    contentColor = White
+                    containerColor = tema.colorPrimario,
+                    contentColor = White // Texto blanco para contraste
                 ),
                 enabled = !isLoading
             ) {
@@ -339,109 +257,75 @@ fun PantallaLogin(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // -- SECCIÓN GOOGLE (VISIBLE PARA TODOS) --
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = LightGray)
-                Text(
-                    "O",
-                    fontSize = 14.sp,
-                    color = SlateGray.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = LightGray)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
+            // BOTÓN GOOGLE
             OutlinedButton(
-                onClick = {
-                    try {
-                        val signInIntent = viewModel.getGoogleSignInIntent()
-                        googleSignInLauncher.launch(signInIntent)
-                    } catch (e: Exception) {
-                        // Manejo de error si Google no está configurado
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, LightGray),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = White),
-                enabled = !isLoading
+                onClick = { googleSignInLauncher.launch(viewModel.getGoogleSignInIntent()) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, BordeGrisClean),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = SlateGray)
             ) {
-                // "Logo" de Google con texto
-                Text("G ", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Continuar con Google", color = SlateGray, fontWeight = FontWeight.SemiBold)
+                // Aquí podrías poner un icono de Google si tienes el drawable
+                Text("Continuar con Google", fontWeight = FontWeight.SemiBold)
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // -- FOOTER LEGAL --
-            val footerText = buildAnnotatedString {
-                append("Al continuar, aceptas nuestra ")
-                withStyle(SpanStyle(color = tema.colorPrincipal, fontWeight = FontWeight.SemiBold)) {
-                    append("Política de Privacidad")
+            // FOOTER: REGISTRO (SOLO PARA PACIENTES)
+            // Lógica: Empleados (Doctores/Admins) no se registran por app.
+            if (rol == RolUsuario.PACIENTE) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("¿No tienes cuenta? ", color = SlateGray)
+                    Text(
+                        text = "Regístrate aquí",
+                        color = tema.colorPrimario,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onIrARegistro(rol) }
+                    )
                 }
-                append(" y ")
-                withStyle(SpanStyle(color = tema.colorPrincipal, fontWeight = FontWeight.SemiBold)) {
-                    append("Términos de Servicio")
-                }
-                append(".")
             }
-            Text(
-                text = footerText,
-                fontSize = 12.sp,
-                color = SlateGray.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                lineHeight = 16.sp
-            )
+
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
-// --- COMPONENTES AUXILIARES ---
-
 @Composable
-fun CampoLoginHtml(
+fun CampoTextoLogin(
     label: String,
     valor: String,
     placeholder: String,
-    onChange: (String) -> Unit,
-    colorFocus: Color
+    colorFocus: Color,
+    onCambio: (String) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
             fontWeight = FontWeight.SemiBold,
             color = SlateGray,
-            fontSize = 16.sp,
+            fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         OutlinedTextField(
             value = valor,
-            onValueChange = onChange,
-            placeholder = { Text(placeholder, color = SlateGray.copy(alpha = 0.5f)) },
+            onValueChange = onCambio,
+            placeholder = { Text(placeholder, color = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = inputHtmlColors(colorFocus),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = colorFocus,
+                unfocusedBorderColor = BordeGrisClean,
+                focusedContainerColor = White,
+                unfocusedContainerColor = White,
+                cursorColor = colorFocus
+            ),
             singleLine = true
         )
     }
 }
-
-@Composable
-fun inputHtmlColors(colorFocus: Color) = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = White,
-    unfocusedContainerColor = White,
-    focusedBorderColor = colorFocus.copy(alpha = 0.5f),
-    unfocusedBorderColor = LightGray,
-    cursorColor = SlateGray,
-    focusedTextColor = SlateGray,
-    unfocusedTextColor = SlateGray
-)

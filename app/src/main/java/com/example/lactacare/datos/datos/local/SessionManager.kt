@@ -39,6 +39,10 @@ class SessionManager @Inject constructor(
     // Obtener Rol
     val userRole: Flow<String?> = context.dataStore.data.map { it[KEY_ROLE] }
 
+    // --- AGREGADO: Obtener Nombre (Para que el HomeViewModel pueda leerlo) ---
+    val userName: Flow<String?> = context.dataStore.data.map { it[KEY_FULL_NAME] }
+    // -----------------------------------------------------------------------
+
     // Obtener si el perfil está completo
     val isProfileCompleted: Flow<Boolean> = context.dataStore.data.map { it[KEY_PROFILE_COMPLETED] ?: false }
 

@@ -21,12 +21,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.lactacare.datos.dto.GoogleUserData
-import com.example.lactacare.ui.theme.SlateGray
+import com.example.lactacare.vistas.theme.SlateGray
 
 // Colores fijos para Paciente
 val PatientColor = Color(0xFFFFC0CB) // Rosa Pastel
 val PatientColorDark = Color(0xFFF06292) // Rosa más oscuro para textos
-
 
 @Composable
 fun PantallaCompletarPerfil(
@@ -48,10 +47,11 @@ fun PantallaCompletarPerfil(
     var fechaNacimiento by remember { mutableStateOf("") }
     var discapacidad by remember { mutableStateOf("Ninguna") }
 
-    // --- ESTADOS DEL VIEWMODEL ---
-    val isLoading by viewModel.isLoading.collectAsState()
-    val mensajeError by viewModel.mensajeError.collectAsState()
-    val loginExitoso by viewModel.loginExitoso.collectAsState()
+    // --- ESTADOS DEL VIEWMODEL (CORREGIDO: Se agrega 'initial') ---
+    // Esto soluciona el error "Cannot infer type" asegurando un valor por defecto
+    val isLoading by viewModel.isLoading.collectAsState(initial = false)
+    val mensajeError by viewModel.mensajeError.collectAsState(initial = null)
+    val loginExitoso by viewModel.loginExitoso.collectAsState(initial = false)
 
     // --- EFECTOS ---
     LaunchedEffect(loginExitoso) {
@@ -93,10 +93,11 @@ fun PantallaCompletarPerfil(
 
             // TARJETA DE USUARIO GOOGLE (Visualización)
             if (googleUserData.picture != null) {
-                Card(
+                // CORRECCIÓN: Usamos ElevatedCard para la sombra correcta
+                ElevatedCard(
                     modifier = Modifier.size(100.dp),
                     shape = RoundedCornerShape(50.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
                 ) {
                     AsyncImage(
                         model = googleUserData.picture,

@@ -36,15 +36,18 @@ fun TopBarHome(saludo: String, colorIcono: Color) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Color.LightGray) // Aquí iría la foto de perfil real
+                    .background(Color.LightGray) // Placeholder foto
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = saludo,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextoOscuroClean
-            )
+            Column {
+                Text(text = "Hola,", fontSize = 14.sp, color = Color.Gray)
+                Text(
+                    text = saludo,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextoOscuroClean
+                )
+            }
         }
 
         IconButton(
@@ -62,7 +65,7 @@ fun TopBarHome(saludo: String, colorIcono: Color) {
 @Composable
 fun BottomNavBarFlotante(
     items: List<ItemMenu>,
-    seccionActual: ItemMenu,
+    rutaActual: String?,
     colorActivo: Color,
     onItemClick: (ItemMenu) -> Unit
 ) {
@@ -81,7 +84,7 @@ fun BottomNavBarFlotante(
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEach { item ->
-                val seleccionado = item == seccionActual
+                val seleccionado = rutaActual == item.ruta
                 val colorIcono = if (seleccionado) colorActivo else Color.Gray.copy(alpha = 0.5f)
 
                 Column(

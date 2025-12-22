@@ -2,7 +2,7 @@ package com.example.lactacare.datos.dto
 
 import com.google.gson.annotations.SerializedName
 
-// --- REQUESTS (Lo que envías al servidor) ---
+// --- REQUESTS (Se quedan igual) ---
 
 data class LoginRequest(
     @SerializedName("correo") val correo: String,
@@ -17,16 +17,16 @@ data class RegisterPacienteRequest(
     @SerializedName("segundoApellido") val segundoApellido: String,
     @SerializedName("correo") val correo: String,
     @SerializedName("telefono") val telefono: String,
-    @SerializedName("fechaNacimiento") val fechaNacimiento: String, // YYYY-MM-DD
+    @SerializedName("fechaNacimiento") val fechaNacimiento: String,
     @SerializedName("password") val password: String,
-    @SerializedName("discapacidad") val discapacidad: String // "true" o "false"
+    @SerializedName("discapacidad") val discapacidad: String
 )
 
 data class GoogleAuthRequest(
     @SerializedName("idToken") val idToken: String
 )
 
-// --- RESPONSES (Lo que recibes del servidor) ---
+// --- RESPONSES (AQUÍ ESTÁ LA CORRECCIÓN) ---
 
 data class AuthResponseDto(
     @SerializedName("accessToken") val accessToken: String,
@@ -37,10 +37,20 @@ data class AuthResponseDto(
 
 data class UserInfoDto(
     @SerializedName("id") val id: Long,
-    @SerializedName("email") val email: String,
-    @SerializedName("fullName") val fullName: String,
-    @SerializedName("role") val role: String,
+
+    // CORRECCIÓN: Backend envía "correo", lo guardamos en 'email'
+    @SerializedName("correo") val email: String,
+
+    // CORRECCIÓN: Backend envía "nombreCompleto", lo guardamos en 'fullName'
+    @SerializedName("nombreCompleto") val fullName: String,
+
+    // CORRECCIÓN: Backend envía "rol", lo guardamos en 'role'
+    @SerializedName("rol") val role: String,
+
     @SerializedName("authProvider") val authProvider: String,
-    @SerializedName("profileImage") val profileImage: String?,
+
+    // CORRECCIÓN: Backend envía "imagenPerfil"
+    @SerializedName("imagenPerfil") val profileImage: String?,
+
     @SerializedName("profileCompleted") val profileCompleted: Boolean
 )
