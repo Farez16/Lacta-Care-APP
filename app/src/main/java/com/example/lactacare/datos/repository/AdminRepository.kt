@@ -60,12 +60,39 @@ class AdminRepository @Inject constructor(
         }
     }
 
-    suspend fun obtenerListaPacientes(): List<com.example.lactacare.datos.dto.PacienteDto> {
+    suspend fun obtenerListaPacientes(): List<com.example.lactacare.datos.dto.UsuarioResponseDto> {
         return try {
             val response = apiService.obtenerPacientes()
             if (response.isSuccessful) response.body() ?: emptyList() else emptyList()
         } catch (e: Exception) {
             emptyList()
+        }
+    }
+    suspend fun crearDoctor(request: com.example.lactacare.datos.dto.CrearEmpleadoRequest): Result<Boolean> {
+        return try {
+            val response = apiService.crearEmpleado(request)
+            if (response.isSuccessful) {
+                Result.success(true)
+            } else {
+                // Parsear el error del backend para mostrar el mensaje real (ej: "Correo repetido")
+                val errorBody = response.errorBody()?.string()
+                val mensajeError = try {
+                    // Intento simplista de extraer el campo "message" del JSON sin crear un DTO extra
+                    // JSON típico: {"message": "El correo ya existe", ...}
+                    if (errorBody != null && errorBody.contains("\"message\":\"")) {
+                        errorBody.substringAfter("\"message\":\"").substringBefore("\"")
+                    } else if (errorBody != null && errorBody.contains("\"message\" : \"")) { // Espacios
+                        errorBody.substringAfter("\"message\" : \"").substringBefore("\"")
+                    } else {
+                        response.message() // Fallback al mensaje HTTP (ej: "Bad Request")
+                    }
+                } catch (e: Exception) {
+                    response.message()
+                }
+                Result.failure(Exception(mensajeError))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

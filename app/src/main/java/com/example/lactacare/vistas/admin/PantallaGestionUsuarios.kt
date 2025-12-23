@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.lactacare.datos.dto.PacienteDto
+
 import com.example.lactacare.datos.dto.UsuarioResponseDto
 import com.example.lactacare.vistas.theme.AdminPrimary
 
@@ -140,7 +140,7 @@ fun ItemDoctor(doctor: UsuarioResponseDto) {
 }
 
 @Composable
-fun ItemPaciente(paciente: PacienteDto) {
+fun ItemPaciente(paciente: UsuarioResponseDto) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),

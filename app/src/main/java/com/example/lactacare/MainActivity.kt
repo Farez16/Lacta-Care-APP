@@ -19,6 +19,8 @@ import com.example.lactacare.vistas.auth.*
 import com.example.lactacare.vistas.home.PantallaHome
 // --- IMPORT NUEVO ---
 import com.example.lactacare.vistas.admin.usuarios.PantallaGestionUsuarios
+import com.example.lactacare.vistas.admin.creardoctor.PantallaCrearDoctor
+import com.example.lactacare.vistas.doctor.atencion.PantallaAtencion
 // --------------------
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
@@ -184,6 +186,10 @@ class MainActivity : ComponentActivity() {
                                 onNavGestion = {
                                     navController.navigate("gestion_usuarios")
                                 },
+                                // NUEVO: Navegación del Doctor
+                                onNavAtencion = { idReserva, nombrePaciente ->
+                                    navController.navigate("atencion_doctor/$idReserva/$nombrePaciente")
+                                },
                                 // ------------------------------------------------------------
                                 onNavReservas = { /* Navegar a reservas */ },
                                 onNavBebe = { /* Navegar a perfil bebé */ },
@@ -196,8 +202,33 @@ class MainActivity : ComponentActivity() {
                             PantallaGestionUsuarios(
                                 onVolver = { navController.popBackStack() },
                                 onCrearDoctor = {
-                                    // Aquí pondremos la navegación al registro de Doctores más adelante
+                                    navController.navigate("crear_doctor")
                                 }
+                            )
+                        }
+
+                        // --- PANTALLA: CREAR DOCTOR (ADMIN) ---
+                        composable("crear_doctor") {
+                            PantallaCrearDoctor(
+                                onVolver = { navController.popBackStack() }
+                            )
+                        }
+
+                        // --- PANTALLA: ATENCIÓN DOCTOR ---
+                        composable(
+                            route = "atencion_doctor/{id}/{nombre}",
+                            arguments = listOf(
+                                navArgument("id") { type = NavType.LongType },
+                                navArgument("nombre") { type = NavType.StringType }
+                            )
+                        ) { backStackEntry ->
+                            val id = backStackEntry.arguments?.getLong("id") ?: 0L
+                            val nombre = backStackEntry.arguments?.getString("nombre") ?: "Paciente"
+                            
+                            PantallaAtencion(
+                                reservaId = id,
+                                nombrePaciente = nombre,
+                                onVolver = { navController.popBackStack() }
                             )
                         }
                     }

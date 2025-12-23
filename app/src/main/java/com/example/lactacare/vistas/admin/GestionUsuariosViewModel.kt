@@ -2,7 +2,6 @@ package com.example.lactacare.vistas.admin.usuarios
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.lactacare.datos.dto.PacienteDto
 import com.example.lactacare.datos.dto.UsuarioResponseDto
 import com.example.lactacare.datos.repository.AdminRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +13,7 @@ import javax.inject.Inject
 data class GestionUiState(
     val isLoading: Boolean = false,
     val listaDoctores: List<UsuarioResponseDto> = emptyList(),
-    val listaPacientes: List<PacienteDto> = emptyList(),
+    val listaPacientes: List<UsuarioResponseDto> = emptyList(), // Ahora usa UsuarioResponseDto
     val tabSeleccionado: Int = 0 // 0 = Doctores, 1 = Pacientes
 )
 

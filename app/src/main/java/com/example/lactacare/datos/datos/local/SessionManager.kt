@@ -20,6 +20,11 @@ class SessionManager @Inject constructor(
         val KEY_FULL_NAME = stringPreferencesKey("user_fullname")
         val KEY_ROLE = stringPreferencesKey("user_role") // "PACIENTE" o "EMPLEADO"
         val KEY_PROFILE_COMPLETED = booleanPreferencesKey("profile_completed")
+        
+        // --- DATOS DEL BEBÉ (Local Persistence) ---
+        val KEY_BABY_NAME = stringPreferencesKey("baby_name")
+        val KEY_BABY_DOB = stringPreferencesKey("baby_dob")
+        val KEY_BABY_GENDER = stringPreferencesKey("baby_gender")
     }
 
     // Guardar todos los datos del usuario al hacer login
@@ -39,9 +44,21 @@ class SessionManager @Inject constructor(
     // Obtener Rol
     val userRole: Flow<String?> = context.dataStore.data.map { it[KEY_ROLE] }
 
-    // --- AGREGADO: Obtener Nombre (Para que el HomeViewModel pueda leerlo) ---
+    // --- AGREGADO: Obtener Nombre y ID ---
     val userName: Flow<String?> = context.dataStore.data.map { it[KEY_FULL_NAME] }
+    val userId: Flow<Long?> = context.dataStore.data.map { it[KEY_USER_ID] }
     // -----------------------------------------------------------------------
+
+    // Datos del Bebé
+    val babyName: Flow<String?> = context.dataStore.data.map { it[KEY_BABY_NAME] }
+    
+    suspend fun saveBabyData(name: String, dob: String, gender: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_BABY_NAME] = name
+            prefs[KEY_BABY_DOB] = dob
+            prefs[KEY_BABY_GENDER] = gender
+        }
+    }
 
     // Obtener si el perfil está completo
     val isProfileCompleted: Flow<Boolean> = context.dataStore.data.map { it[KEY_PROFILE_COMPLETED] ?: false }

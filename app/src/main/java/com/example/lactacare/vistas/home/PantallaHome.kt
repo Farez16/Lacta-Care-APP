@@ -15,18 +15,33 @@ import androidx.navigation.compose.rememberNavController
 import com.example.lactacare.dominio.model.RolUsuario
 import com.example.lactacare.vistas.navegacion.*
 import com.example.lactacare.vistas.theme.*
+import com.example.lactacare.vistas.admin.inventario.PantallaInventario
+import com.example.lactacare.vistas.admin.lactarios.PantallaLactarios
+import com.example.lactacare.vistas.admin.perfil.PantallaPerfilAdmin
+import com.example.lactacare.vistas.bebe.PantallaAnadirBebe
+import com.example.lactacare.vistas.chat.PantallaChat
+import com.example.lactacare.vistas.doctor.home.PantallaHomeDoctor
+import com.example.lactacare.vistas.doctor.perfil.PantallaPerfilDoctor
+import com.example.lactacare.vistas.paciente.home.PantallaHomePaciente
+import com.example.lactacare.vistas.paciente.perfil.PantallaPerfilPaciente
+import com.example.lactacare.vistas.paciente.reserva.PantallaAgendar
 
 @Composable
 fun PantallaHome(
     rolUsuario: RolUsuario,
     onLogout: () -> Unit,
-    onNavReservas: () -> Unit = {},
+    onNavReservas: () -> Unit = { /* Default empty handled in NavGraph */ },
     onNavBebe: () -> Unit = {},
     onNavInfo: () -> Unit = {},
-    onNavGestion: () -> Unit = {}, // ✅ Recibimos la navegación desde MainActivity
+    onNavGestion: () -> Unit = {},
+    onNavAtencion: (Long, String) -> Unit = { _, _ -> }, // Nuevo: Para ir a atender
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
+
+    // --- ACCIONES DE NAVEGACIÓN ---
+    val goReservas = { navController.navigate("agendar_paciente") }
+    // ----------------------------
 
     // 1. Configuración de Menú y Colores
     val (itemsMenu, colorPrincipal) = when (rolUsuario) {
@@ -67,39 +82,78 @@ fun PantallaHome(
             ) {
                 // --- RUTAS PACIENTE ---
                 composable(ItemMenu.PacienteInicio.ruta) {
-                    Column {
-                        TopBarHome(saludo = uiState.nombreUsuario, colorIcono = colorPrincipal)
-                        PantallaEnConstruccion("Dashboard Paciente (Pronto)")
-                    }
+                     PantallaHomePaciente(
+                         nombreUsuario = uiState.nombreUsuario,
+                         onLogout = onLogout,
+                         onNavReservas = goReservas,
+                         onNavBebe = onNavBebe,
+                         onNavInfo = { _ -> onNavInfo() },
+                         onNavChat = { navController.navigate(ItemMenu.PacienteChat.ruta) }
+                     )
                 }
-                composable(ItemMenu.PacienteBebe.ruta) { PantallaEnConstruccion("Mi Bebé") }
-                composable(ItemMenu.PacienteChat.ruta) { PantallaEnConstruccion("Chat IA") }
-                composable(ItemMenu.PacientePerfil.ruta) { BotonCerrarSesion(onLogout, viewModel) }
+                composable(ItemMenu.PacienteBebe.ruta) { 
+                    PantallaAnadirBebe(onVolver = { navController.popBackStack() })
+                }
+                composable(ItemMenu.PacienteChat.ruta) { PantallaChat() }
+                composable(ItemMenu.PacientePerfil.ruta) { 
+                    PantallaPerfilPaciente(onLogout = onLogout)
+                }
+
+                // --- NUEVA RUTA INTERNA: AGENDAR ---
+                composable("agendar_paciente") {
+                    PantallaAgendar(onVolver = { navController.popBackStack() })
+                }
+                // -----------------------------------
 
                 // --- RUTAS ADMIN ---
                 composable(ItemMenu.AdminDashboard.ruta) {
-                    Column {
-                        TopBarHome(saludo = uiState.nombreUsuario, colorIcono = colorPrincipal)
-
-                        // Lógica de carga
-                        if (uiState.isLoading) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = colorPrincipal)
-                            }
-                        } else {
-                            // ✅ AQUÍ ESTÁ EL CAMBIO
-                            DashboardAdmin(
-                                colorPrincipal = colorPrincipal,
-                                colorAcento = Color(0xFFE1F5FE),
-                                stats = uiState.adminStats,
-                                onNavGestion = onNavGestion // <--- ¡Conectado el cable que faltaba!
+                    when (rolUsuario) {
+                        RolUsuario.DOCTOR -> {
+                            PantallaHomeDoctor(
+                                onLogout = {
+                                    viewModel.cerrarSesion()
+                                    onLogout()
+                                },
+                                onAtender = onNavAtencion
                             )
+                        }
+                        else -> {
+                            Column {
+                                TopBarHome(saludo = uiState.nombreUsuario, colorIcono = colorPrincipal)
+
+                                if (uiState.isLoading) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator(color = colorPrincipal)
+                                    }
+                                } else {
+                                    DashboardAdmin(
+                                        colorPrincipal = colorPrincipal,
+                                        colorAcento = Color(0xFFE1F5FE),
+                                        stats = uiState.adminStats,
+                                        onNavGestion = onNavGestion
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-                composable(ItemMenu.AdminInventario.ruta) { PantallaEnConstruccion("Inventario") }
-                composable(ItemMenu.AdminLactarios.ruta) { PantallaEnConstruccion("Lactarios") }
-                composable(ItemMenu.AdminPerfil.ruta) { BotonCerrarSesion(onLogout, viewModel) }
+                composable(ItemMenu.AdminInventario.ruta) { 
+                    // Pantalla Real de Inventario
+                    PantallaInventario() 
+                }
+                composable(ItemMenu.AdminLactarios.ruta) { 
+                     PantallaLactarios() 
+                }
+                composable(ItemMenu.AdminPerfil.ruta) { 
+                    when (rolUsuario) {
+                        RolUsuario.DOCTOR -> {
+                            PantallaPerfilDoctor(onLogout = onLogout)
+                        }
+                        else -> {
+                            PantallaPerfilAdmin(onLogout = onLogout)
+                        }
+                    }
+                }
             }
         }
     }

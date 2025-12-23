@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.lactacare.R
 import com.example.lactacare.datos.network.AuthApiService
 import com.example.lactacare.datos.network.ApiService // <--- IMPORTANTE: Importamos el nuevo servicio
+import com.example.lactacare.datos.network.AuthInterceptor
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -25,12 +26,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(authInterceptor: com.example.lactacare.datos.network.AuthInterceptor): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         return OkHttpClient.Builder()
             .addInterceptor(logging)
+            .addInterceptor(authInterceptor) // <--- TOKEN AGREGADO AQUÍ
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
