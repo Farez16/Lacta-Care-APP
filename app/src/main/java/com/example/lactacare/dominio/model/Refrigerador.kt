@@ -1,6 +1,7 @@
 package com.example.lactacare.dominio.model
 
 data class Refrigerador(
+
     val id: Int,
     val idLactario: Int,
     val capacidadMax: Int,

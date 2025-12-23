@@ -1,17 +1,15 @@
 package com.example.lactacare.dominio.model
 
-// Esta clase define QUÉ datos ve el admin
 data class DashboardAdminStats(
     val totalUsuarios: Int,
     val totalDoctores: Int,
     val citasHoy: Int,
     val alertasActivas: Int,
-    val actividadesRecientes: List<ActividadAdmin>
+    val actividadesRecientes: List<ActividadReciente>
 )
 
-data class ActividadAdmin(
-    val id: Int,
+data class ActividadReciente(
     val titulo: String,
     val subtitulo: String,
-    val tipo: String // "ALERTA", "INFO", "NUEVO"
+    val esAlerta: Boolean
 )

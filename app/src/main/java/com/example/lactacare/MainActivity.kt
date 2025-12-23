@@ -17,6 +17,9 @@ import androidx.navigation.navArgument
 import com.example.lactacare.datos.dto.GoogleUserData
 import com.example.lactacare.vistas.auth.*
 import com.example.lactacare.vistas.home.PantallaHome
+// --- IMPORT NUEVO ---
+import com.example.lactacare.vistas.admin.usuarios.PantallaGestionUsuarios
+// --------------------
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -42,16 +45,13 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
 
                     // 1. DETERMINAR RUTA INICIAL
-                    // Verificamos si ya existe una sesión guardada antes de cargar la interfaz
                     val (rutaInicial, rolGuardado) = runBlocking {
                         val token = sessionManager.authToken.first()
                         val rolString = sessionManager.userRole.first()
 
                         if (!token.isNullOrEmpty() && !rolString.isNullOrEmpty()) {
-                            // Sesión activa -> Ir al Home
                             Pair("home/$rolString", rolString)
                         } else {
-                            // Sin sesión -> Ir a Bienvenida
                             Pair("bienvenida", null)
                         }
                     }
@@ -79,25 +79,19 @@ class MainActivity : ComponentActivity() {
                             val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
 
                             val viewModel: AuthViewModel = hiltViewModel()
-
-                            // Configuramos el rol actual en el ViewModel al entrar
                             LaunchedEffect(rolEnum) { viewModel.setRol(rolEnum) }
 
-                            // OBSERVER 1: PERFIL INCOMPLETO (GOOGLE)
+                            // Google Login Incompleto
                             val incompleteData by viewModel.profileIncompleteData.collectAsState()
-
                             LaunchedEffect(incompleteData) {
                                 incompleteData?.let { data ->
-                                    // Guardamos los datos parcelables en el handle de navegación para pasarlos
                                     navController.currentBackStackEntry?.savedStateHandle?.set("googleData", data.googleUserData)
-                                    // Navegamos a la pantalla de completar
                                     navController.navigate("completar_perfil")
                                 }
                             }
 
-                            // OBSERVER 2: LOGIN EXITOSO (NORMAL O GOOGLE COMPLETO)
+                            // Login Exitoso
                             val loginExitoso by viewModel.loginExitoso.collectAsState()
-
                             LaunchedEffect(loginExitoso) {
                                 if (loginExitoso) {
                                     navController.navigate("home/${rolEnum.name}") {
@@ -115,8 +109,6 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("recuperar_password/${rolEnum.name}")
                                 },
                                 onLoginExitoso = {
-                                    // Esta callback es redundante si usamos el LaunchedEffect de arriba,
-                                    // pero la dejamos por seguridad si la UI lo llama directamente.
                                     navController.navigate("home/${rolEnum.name}") {
                                         popUpTo("bienvenida") { inclusive = true }
                                     }
@@ -126,7 +118,6 @@ class MainActivity : ComponentActivity() {
 
                         // --- PANTALLA COMPLETAR PERFIL (GOOGLE) ---
                         composable("completar_perfil") {
-                            // Recuperamos el objeto GoogleUserData enviado desde Login
                             val googleUserData = navController.previousBackStackEntry
                                 ?.savedStateHandle
                                 ?.get<GoogleUserData>("googleData")
@@ -135,17 +126,13 @@ class MainActivity : ComponentActivity() {
                                 PantallaCompletarPerfil(
                                     googleUserData = googleUserData,
                                     onPerfilCompletado = {
-                                        // Asumimos que es Paciente por defecto al registrarse con Google
                                         navController.navigate("home/PACIENTE") {
                                             popUpTo("bienvenida") { inclusive = true }
                                         }
                                     },
-                                    onCancelar = {
-                                        navController.popBackStack()
-                                    }
+                                    onCancelar = { navController.popBackStack() }
                                 )
                             } else {
-                                // Seguridad: Si no hay datos, volvemos atrás
                                 LaunchedEffect(Unit) { navController.popBackStack() }
                             }
                         }
@@ -190,13 +177,27 @@ class MainActivity : ComponentActivity() {
                                 rolUsuario = rolEnum,
                                 onLogout = {
                                     navController.navigate("bienvenida") {
-                                        popUpTo(0) { inclusive = true } // Limpia toda la pila de navegación
+                                        popUpTo(0) { inclusive = true }
                                     }
                                 },
-                                // Defines aquí tus navegaciones internas del Home
+                                // --- CONEXIÓN: AL TOCAR LAS TARJETAS DEL DASHBOARD ADMIN ---
+                                onNavGestion = {
+                                    navController.navigate("gestion_usuarios")
+                                },
+                                // ------------------------------------------------------------
                                 onNavReservas = { /* Navegar a reservas */ },
                                 onNavBebe = { /* Navegar a perfil bebé */ },
                                 onNavInfo = { /* Navegar a info */ }
+                            )
+                        }
+
+                        // --- NUEVA PANTALLA: GESTIÓN DE USUARIOS (ADMIN) ---
+                        composable("gestion_usuarios") {
+                            PantallaGestionUsuarios(
+                                onVolver = { navController.popBackStack() },
+                                onCrearDoctor = {
+                                    // Aquí pondremos la navegación al registro de Doctores más adelante
+                                }
                             )
                         }
                     }

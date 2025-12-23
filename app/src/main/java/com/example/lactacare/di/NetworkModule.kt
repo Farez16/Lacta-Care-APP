@@ -3,6 +3,7 @@ package com.example.lactacare.di
 import android.content.Context
 import com.example.lactacare.R
 import com.example.lactacare.datos.network.AuthApiService
+import com.example.lactacare.datos.network.ApiService // <--- IMPORTANTE: Importamos el nuevo servicio
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -39,9 +40,8 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(
         okHttpClient: OkHttpClient,
-        @ApplicationContext context: Context // Inyectamos contexto para leer strings.xml
+        @ApplicationContext context: Context
     ): Retrofit {
-        // Usamos la URL definida en res/values/strings.xml
         val baseUrl = context.getString(R.string.backend_url)
 
         return Retrofit.Builder()
@@ -51,16 +51,24 @@ object NetworkModule {
             .build()
     }
 
+    // Proveedor para Autenticación (Login/Registro)
     @Provides
     @Singleton
     fun provideAuthApiService(retrofit: Retrofit): AuthApiService {
         return retrofit.create(AuthApiService::class.java)
     }
 
+    // --- NUEVO: Proveedor para Datos del Dashboard (Admin/Paciente) ---
+    @Provides
+    @Singleton
+    fun provideApiService(retrofit: Retrofit): ApiService {
+        return retrofit.create(ApiService::class.java)
+    }
+    // ------------------------------------------------------------------
+
     @Provides
     @Singleton
     fun provideGoogleSignInClient(@ApplicationContext context: Context): GoogleSignInClient {
-        // RECUERDA: Cambia esto por tu Client ID real si no lo has hecho
         val webClientId = context.getString(R.string.web_client_id)
 
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
