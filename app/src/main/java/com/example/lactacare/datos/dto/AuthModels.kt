@@ -26,31 +26,27 @@ data class GoogleAuthRequest(
     @SerializedName("idToken") val idToken: String
 )
 
-// --- RESPONSES (AQUÍ ESTÁ LA CORRECCIÓN) ---
+// --- RESPONSES (MODIFICADO PARA SOPORTAR CASO 202) ---
 
 data class AuthResponseDto(
-    @SerializedName("accessToken") val accessToken: String,
-    @SerializedName("refreshToken") val refreshToken: String,
-    @SerializedName("expiresIn") val expiresIn: Long,
-    @SerializedName("userInfo") val userInfo: UserInfoDto
+    // Campos de Login Exitoso (Ahora son Nullable ? porque en el caso 202 no vienen)
+    @SerializedName("accessToken") val accessToken: String?,
+    @SerializedName("refreshToken") val refreshToken: String?,
+    @SerializedName("expiresIn") val expiresIn: Long?,
+    @SerializedName("userInfo") val userInfo: UserInfoDto?,
+
+    // Campos de Perfil Incompleto (Nuevos campos para capturar la respuesta 202)
+    @SerializedName("status") val status: String?,
+    @SerializedName("message") val message: String?,
+    @SerializedName("googleUserData") val googleUserData: GoogleUserData?
 )
 
 data class UserInfoDto(
     @SerializedName("id") val id: Long,
-
-    // CORRECCIÓN: Backend envía "correo", lo guardamos en 'email'
     @SerializedName("correo") val email: String,
-
-    // CORRECCIÓN: Backend envía "nombreCompleto", lo guardamos en 'fullName'
     @SerializedName("nombreCompleto") val fullName: String,
-
-    // CORRECCIÓN: Backend envía "rol", lo guardamos en 'role'
     @SerializedName("rol") val role: String,
-
     @SerializedName("authProvider") val authProvider: String,
-
-    // CORRECCIÓN: Backend envía "imagenPerfil"
     @SerializedName("imagenPerfil") val profileImage: String?,
-
     @SerializedName("profileCompleted") val profileCompleted: Boolean
 )

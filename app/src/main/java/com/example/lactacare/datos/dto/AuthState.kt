@@ -1,10 +1,12 @@
 package com.example.lactacare.datos.dto
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
-
+@Parcelize
 data class ProfileIncompleteData(
     val googleUserData: GoogleUserData,
     val googleToken: String? = null // Opcional, dependiendo de tu backend
-)
+) : Parcelable
 
 sealed class AuthState {
     object Idle : AuthState()

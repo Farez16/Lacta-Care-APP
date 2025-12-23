@@ -3,21 +3,24 @@ package com.example.lactacare
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
-import androidx.navigation.compose.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-
-// Importaciones de tus paquetes
+import com.example.lactacare.datos.dto.GoogleUserData
 import com.example.lactacare.vistas.auth.*
 import com.example.lactacare.vistas.home.PantallaHome
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import javax.inject.Inject
 import com.example.lactacare.dominio.model.RolUsuario
 import com.example.lactacare.datos.local.SessionManager
 
@@ -38,17 +41,17 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    // 1. LÓGICA DE INICIO: Verificar sesión y ROL
-                    // Leemos token y rol guardado para saber a dónde enviar al usuario si ya estaba logueado
+                    // 1. DETERMINAR RUTA INICIAL
+                    // Verificamos si ya existe una sesión guardada antes de cargar la interfaz
                     val (rutaInicial, rolGuardado) = runBlocking {
                         val token = sessionManager.authToken.first()
                         val rolString = sessionManager.userRole.first()
 
                         if (!token.isNullOrEmpty() && !rolString.isNullOrEmpty()) {
-                            // Si tiene sesión, va directo al home con su rol
+                            // Sesión activa -> Ir al Home
                             Pair("home/$rolString", rolString)
                         } else {
-                            // Si no, va a la bienvenida
+                            // Sin sesión -> Ir a Bienvenida
                             Pair("bienvenida", null)
                         }
                     }
@@ -57,7 +60,8 @@ class MainActivity : ComponentActivity() {
                         navController = navController,
                         startDestination = rutaInicial
                     ) {
-                        // --- 1. BIENVENIDA ---
+
+                        // --- PANTALLA DE BIENVENIDA ---
                         composable("bienvenida") {
                             PantallaBienvenida(
                                 onRolSeleccionado = { rol ->
@@ -66,18 +70,41 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // --- 2. LOGIN ---
+                        // --- PANTALLA DE LOGIN ---
                         composable(
                             route = "login/{rolTexto}",
                             arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
                         ) { backStackEntry ->
                             val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
-                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch(e: Exception) { RolUsuario.PACIENTE }
+                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
 
-                            val viewModel: AuthViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                            val viewModel: AuthViewModel = hiltViewModel()
 
-                            // Pasamos el rol al ViewModel para que pinte los colores correctos
+                            // Configuramos el rol actual en el ViewModel al entrar
                             LaunchedEffect(rolEnum) { viewModel.setRol(rolEnum) }
+
+                            // OBSERVER 1: PERFIL INCOMPLETO (GOOGLE)
+                            val incompleteData by viewModel.profileIncompleteData.collectAsState()
+
+                            LaunchedEffect(incompleteData) {
+                                incompleteData?.let { data ->
+                                    // Guardamos los datos parcelables en el handle de navegación para pasarlos
+                                    navController.currentBackStackEntry?.savedStateHandle?.set("googleData", data.googleUserData)
+                                    // Navegamos a la pantalla de completar
+                                    navController.navigate("completar_perfil")
+                                }
+                            }
+
+                            // OBSERVER 2: LOGIN EXITOSO (NORMAL O GOOGLE COMPLETO)
+                            val loginExitoso by viewModel.loginExitoso.collectAsState()
+
+                            LaunchedEffect(loginExitoso) {
+                                if (loginExitoso) {
+                                    navController.navigate("home/${rolEnum.name}") {
+                                        popUpTo("bienvenida") { inclusive = true }
+                                    }
+                                }
+                            }
 
                             PantallaLogin(
                                 viewModel = viewModel,
@@ -88,8 +115,8 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("recuperar_password/${rolEnum.name}")
                                 },
                                 onLoginExitoso = {
-                                    // AL LOGIN EXITOSO: Navegamos al Home pasando el ROL
-                                    // Esto asegura que el Home sepa si mostrar cosas de Paciente o Doctor
+                                    // Esta callback es redundante si usamos el LaunchedEffect de arriba,
+                                    // pero la dejamos por seguridad si la UI lo llama directamente.
                                     navController.navigate("home/${rolEnum.name}") {
                                         popUpTo("bienvenida") { inclusive = true }
                                     }
@@ -97,26 +124,52 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // --- 3. REGISTRO ---
+                        // --- PANTALLA COMPLETAR PERFIL (GOOGLE) ---
+                        composable("completar_perfil") {
+                            // Recuperamos el objeto GoogleUserData enviado desde Login
+                            val googleUserData = navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.get<GoogleUserData>("googleData")
+
+                            if (googleUserData != null) {
+                                PantallaCompletarPerfil(
+                                    googleUserData = googleUserData,
+                                    onPerfilCompletado = {
+                                        // Asumimos que es Paciente por defecto al registrarse con Google
+                                        navController.navigate("home/PACIENTE") {
+                                            popUpTo("bienvenida") { inclusive = true }
+                                        }
+                                    },
+                                    onCancelar = {
+                                        navController.popBackStack()
+                                    }
+                                )
+                            } else {
+                                // Seguridad: Si no hay datos, volvemos atrás
+                                LaunchedEffect(Unit) { navController.popBackStack() }
+                            }
+                        }
+
+                        // --- PANTALLA DE REGISTRO MANUAL ---
                         composable(
                             route = "registro/{rolTexto}",
                             arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
                         ) {
-                            val viewModel: RegistroPersonaViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                            val viewModel: RegistroPersonaViewModel = hiltViewModel()
                             PantallaRegistroPersona(
                                 viewModel = viewModel,
                                 onIrALogin = { navController.popBackStack() }
                             )
                         }
 
-                        // --- 4. RECUPERAR PASSWORD ---
+                        // --- PANTALLA RECUPERAR PASSWORD ---
                         composable(
                             route = "recuperar_password/{rolTexto}",
                             arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
                         ) { backStackEntry ->
                             val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
-                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch(e: Exception) { RolUsuario.PACIENTE }
-                            val viewModel: AuthViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
+                            val viewModel: AuthViewModel = hiltViewModel()
 
                             PantallaRecuperarPassword(
                                 rolUsuario = rolEnum,
@@ -125,26 +178,25 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // --- 5. HOME (PANTALLA PRINCIPAL REAL) ---
-                        // Ahora recibe el rol como parámetro en la ruta: "home/PACIENTE" o "home/DOCTOR"
+                        // --- PANTALLA HOME (PRINCIPAL) ---
                         composable(
                             route = "home/{rolTexto}",
                             arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
                         ) { backStackEntry ->
                             val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
-                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch(e: Exception) { RolUsuario.PACIENTE }
+                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
 
                             PantallaHome(
                                 rolUsuario = rolEnum,
                                 onLogout = {
                                     navController.navigate("bienvenida") {
-                                        popUpTo(0) { inclusive = true } // Borra toda la pila
+                                        popUpTo(0) { inclusive = true } // Limpia toda la pila de navegación
                                     }
                                 },
-                                // Aquí conectarás las navegaciones internas (detalles, reservas, etc)
-                                onNavReservas = { /* TODO: Navegar a pantalla reservas */ },
-                                onNavBebe = { /* TODO: Navegar a pantalla bebé */ },
-                                onNavInfo = { /* TODO: Navegar a info */ }
+                                // Defines aquí tus navegaciones internas del Home
+                                onNavReservas = { /* Navegar a reservas */ },
+                                onNavBebe = { /* Navegar a perfil bebé */ },
+                                onNavInfo = { /* Navegar a info */ }
                             )
                         }
                     }

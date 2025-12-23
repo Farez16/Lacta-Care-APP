@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     id("com.google.gms.google-services")
+    id("kotlin-parcelize")
 
     // --- AGREGADO: Plugins necesarios para Hilt (Inyección de dependencias) ---
     id("kotlin-kapt")

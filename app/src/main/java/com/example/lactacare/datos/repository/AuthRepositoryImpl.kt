@@ -22,7 +22,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val api: AuthApiService,
     private val sessionManager: SessionManager,
     private val responseHandler: ApiResponseHandler,
-    private val googleSignInClient: GoogleSignInClient // <--- NUEVA INYECCIÓN
+    private val googleSignInClient: GoogleSignInClient
 ) : AuthRepository {
 
     // --- LOGIN NORMAL ---
@@ -31,17 +31,19 @@ class AuthRepositoryImpl @Inject constructor(
             val request = LoginRequest(correo, pass)
             val response = api.login(request)
 
-            // Usamos handleSuccess pero mapeamos a Unit al final
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()!!
 
+                // CORRECCIÓN: Como userInfo ahora es nullable (?), verificamos que exista
+                val userInfo = authResponse.userInfo
+                    ?: return Result.failure(Exception("Error: Datos de usuario vacíos en respuesta."))
+
                 // VALIDACIÓN DE SEGURIDAD DE ROL
-                // Asumimos que el backend devuelve el rol en authResponse.userInfo.role
-                // "PACIENTE", "DOCTOR", "ADMINISTRADOR"
-                if (!roleMatches(authResponse.userInfo.role, rol)) {
+                if (!roleMatches(userInfo.role, rol)) {
                     return Result.failure(Exception("No tienes permisos para acceder como ${rol.name}"))
                 }
 
+                // Guardamos sesión (la función interna validará los nulos)
                 guardarSesionLocalmente(authResponse)
                 Result.success(Unit)
             } else {
@@ -58,37 +60,27 @@ class AuthRepositoryImpl @Inject constructor(
         return googleSignInClient.signInIntent
     }
 
-    // --- GOOGLE: PROCESAR LOGIN ---
+    // --- GOOGLE: PROCESAR LOGIN (CORREGIDO Y ADAPTADO AL DTO) ---
     override suspend fun loginWithGoogle(intent: Intent?): Result<AuthState> {
         return try {
-            // 1. Extraer cuenta de Google del Intent
             val task = GoogleSignIn.getSignedInAccountFromIntent(intent)
             val googleAccount = task.getResult(ApiException::class.java)
-
             val idToken = googleAccount?.idToken
                 ?: return Result.failure(Exception("No se pudo obtener el ID Token de Google"))
 
-            // --- CORRECCIÓN AQUÍ ---
-
-            // 1. Usamos GoogleAuthRequest (que es lo que pide tu ApiService)
             val request = GoogleAuthRequest(idToken = idToken)
-
-            // 2. Llamamos a googleLogin (que es como se llama en tu ApiService)
             val response = api.googleLogin(request)
 
-            // -----------------------
-
+            // Aceptamos 200 (OK) y 202 (Accepted/Incompleto)
             if (response.isSuccessful && response.body() != null) {
-                val authResponse = response.body()!!
+                val body = response.body()!!
 
-                // Aquí el error de 'userInfo' desaparecerá porque tu AuthResponseDto ya lo tiene
-                if (authResponse.userInfo.profileCompleted) {
-                    guardarSesionLocalmente(authResponse)
-                    Result.success(AuthState.Authenticated)
-                } else {
-                    // USUARIO NUEVO O INCOMPLETO -> FALTAN DATOS
-                    // Construimos el objeto con datos de Google para pre-llenar el formulario
-                    val googleData = GoogleUserData(
+                // CASO 1: PERFIL INCOMPLETO (Status 202 o flag explícito)
+                // Verificamos código 202 O el status string O mensaje específico
+                if (response.code() == 202 || body.status == "USER_PROFILE_INCOMPLETE") {
+
+                    // Verificamos que googleUserData no sea null. Si es null, lo creamos con datos del SDK
+                    val googleData = body.googleUserData ?: GoogleUserData(
                         googleId = googleAccount.id ?: "",
                         email = googleAccount.email ?: "",
                         name = googleAccount.displayName ?: "",
@@ -99,16 +91,28 @@ class AuthRepositoryImpl @Inject constructor(
 
                     val incompleteData = ProfileIncompleteData(
                         googleUserData = googleData,
-                        googleToken = idToken // Guardamos el token para enviarlo luego
+                        googleToken = idToken
                     )
 
-                    Result.success(AuthState.ProfileIncomplete(incompleteData))
+                    return Result.success(AuthState.ProfileIncomplete(incompleteData))
                 }
+
+                // CASO 2: LOGIN EXITOSO (Status 200 y userInfo existe)
+                if (body.userInfo != null) {
+                    guardarSesionLocalmente(body)
+                    return Result.success(AuthState.Authenticated)
+                }
+
+                // Si llegamos aquí, la respuesta no se entendió
+                return Result.failure(Exception("Respuesta del servidor desconocida."))
+
             } else {
-                Result.failure(Exception("Error en backend Google: ${response.message()}"))
+                val errorMsg = response.errorBody()?.string() ?: "Error en backend Google: ${response.code()}"
+                Result.failure(Exception(errorMsg))
             }
 
         } catch (e: Exception) {
+            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -157,6 +161,7 @@ class AuthRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
     override suspend fun getUserProfile(): Result<UserProfileDto> {
         return try {
             val response = api.getUserProfile()
@@ -183,6 +188,7 @@ class AuthRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
     // --- RECUPERAR PASSWORD ---
     override suspend fun recuperarPassword(email: String): Result<Unit> {
         return try {
@@ -197,14 +203,18 @@ class AuthRepositoryImpl @Inject constructor(
     // --- LOGOUT ---
     override suspend fun logout() {
         sessionManager.clearSession()
-        googleSignInClient.signOut() // También cerramos sesión en el cliente de Google
+        googleSignInClient.signOut()
     }
 
-    // --- HELPER: GUARDAR ---
+    // --- HELPER: GUARDAR (CORREGIDO) ---
     private suspend fun guardarSesionLocalmente(authResponse: AuthResponseDto) {
-        val info = authResponse.userInfo
+        // CORRECCIÓN: Como accessToken y userInfo son nullable (?), debemos
+        // usar el operador Elvis (?:) para evitar guardar nulos o salir de la función.
+        val token = authResponse.accessToken ?: return
+        val info = authResponse.userInfo ?: return
+
         sessionManager.saveAuthData(
-            token = authResponse.accessToken,
+            token = token,
             id = info.id,
             name = info.fullName,
             role = info.role,
@@ -214,7 +224,6 @@ class AuthRepositoryImpl @Inject constructor(
 
     // --- HELPER: VALIDAR ROL ---
     private fun roleMatches(backendRole: String, requestedRole: RolUsuario): Boolean {
-        // Normalizamos strings para comparar (ej: "PACIENTE" == "PACIENTE")
         return backendRole.equals(requestedRole.name, ignoreCase = true)
     }
 }
