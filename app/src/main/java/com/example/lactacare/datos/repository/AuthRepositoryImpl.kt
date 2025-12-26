@@ -28,26 +28,31 @@ class AuthRepositoryImpl @Inject constructor(
     // --- LOGIN NORMAL ---
     override suspend fun login(correo: String, pass: String, rol: RolUsuario): Result<Unit> {
         return try {
-            val request = LoginRequest(correo, pass)
+            // 1. Enviamos el nombre del rol (PACIENTE, MEDICO, ADMINISTRADOR)
+            val request = LoginRequest(correo, pass, rol.name)
             val response = api.login(request)
 
             if (response.isSuccessful && response.body() != null) {
-                val authResponse = response.body()!!
+                val body = response.body()!!
+                val userData = body.data ?: return Result.failure(Exception("No se recibieron datos del usuario"))
 
-                // CORRECCIÓN: Como userInfo ahora es nullable (?), verificamos que exista
-                val userInfo = authResponse.userInfo
-                    ?: return Result.failure(Exception("Error: Datos de usuario vacíos en respuesta."))
+                // 2. Extraemos los datos usando las llaves EXACTAS que puso el backend en Java
+                val token = userData["access_token"] as? String ?: ""
+                val id = (userData["id"] as? Double)?.toLong() ?: 0L // Retrofit/Gson lee números como Double
+                val name = userData["nombre_completo"] as? String ?: ""
+                val roleStr = userData["rol"] as? String ?: ""
 
-                // VALIDACIÓN DE SEGURIDAD DE ROL
-                if (!roleMatches(userInfo.role, rol)) {
-                    return Result.failure(Exception("No tienes permisos para acceder como ${rol.name}"))
-                }
-
-                // Guardamos sesión (la función interna validará los nulos)
-                guardarSesionLocalmente(authResponse)
+                // 3. Guardamos en SessionManager
+                sessionManager.saveAuthData(
+                    token = token,
+                    id = id,
+                    name = name,
+                    role = roleStr,
+                    completed = true
+                )
                 Result.success(Unit)
             } else {
-                val errorMsg = response.errorBody()?.string() ?: "Error en login"
+                val errorMsg = responseHandler.parseErrorBody(response) // Usamos tu handler
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
@@ -89,12 +94,9 @@ class AuthRepositoryImpl @Inject constructor(
                         picture = googleAccount.photoUrl?.toString()
                     )
 
-                    val incompleteData = ProfileIncompleteData(
-                        googleUserData = googleData,
-                        googleToken = idToken
-                    )
-
-                    return Result.success(AuthState.ProfileIncomplete(incompleteData))
+                    return Result.success(AuthState.ProfileIncomplete(
+                        ProfileIncompleteData(googleData, idToken)
+                    ))
                 }
 
                 // CASO 2: LOGIN EXITOSO (Status 200 y userInfo existe)

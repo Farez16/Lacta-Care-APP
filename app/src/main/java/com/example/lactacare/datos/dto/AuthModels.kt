@@ -6,7 +6,8 @@ import com.google.gson.annotations.SerializedName
 
 data class LoginRequest(
     @SerializedName("correo") val correo: String,
-    @SerializedName("password") val password: String
+    @SerializedName("password") val password: String,
+    @SerializedName("tipoUsuario") val tipoUsuario: String
 )
 
 data class RegisterPacienteRequest(
@@ -35,10 +36,16 @@ data class AuthResponseDto(
     @SerializedName("expiresIn") val expiresIn: Long?,
     @SerializedName("userInfo") val userInfo: UserInfoDto?,
 
+    @SerializedName("success") val success: Boolean, //eliminar si no funciona ojo
+
+    // El backend mete todo dentro de un objeto/mapa llamado "data" o lo manda directo?
+    // Según tu AuthController, el login unificado devuelve un mapa de datos.
+    @SerializedName("data") val data: Map<String, Any>?,
+
     // Campos de Perfil Incompleto (Nuevos campos para capturar la respuesta 202)
     @SerializedName("status") val status: String?,
     @SerializedName("message") val message: String?,
-    @SerializedName("googleUserData") val googleUserData: GoogleUserData?
+    @SerializedName("googleUserData") val googleUserData: GoogleUserData?,
 )
 
 data class UserInfoDto(

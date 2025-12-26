@@ -3,7 +3,9 @@ package com.example.lactacare
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
@@ -119,23 +121,39 @@ class MainActivity : ComponentActivity() {
                         }
 
                         // --- PANTALLA COMPLETAR PERFIL (GOOGLE) ---
-                        composable("completar_perfil") {
-                            val googleUserData = navController.previousBackStackEntry
-                                ?.savedStateHandle
-                                ?.get<GoogleUserData>("googleData")
+                        composable("completar_perfil") { backStackEntry ->
+                            // USAMOS remember PARA QUE LOS DATOS SOBREVIVAN A LA RECOMPOSICIÓN
+                            val googleUserData = remember {
+                                navController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.get<GoogleUserData>("googleData")
+                            }
 
                             if (googleUserData != null) {
                                 PantallaCompletarPerfil(
                                     googleUserData = googleUserData,
                                     onPerfilCompletado = {
+                                        // Navegación limpia al Home
                                         navController.navigate("home/PACIENTE") {
                                             popUpTo("bienvenida") { inclusive = true }
+                                            launchSingleTop = true // Evita duplicar la pantalla si se clica rápido
                                         }
                                     },
-                                    onCancelar = { navController.popBackStack() }
+                                    onCancelar = {
+                                        navController.popBackStack()
+                                    }
                                 )
                             } else {
-                                LaunchedEffect(Unit) { navController.popBackStack() }
+                                // Si los datos son nulos, mostramos carga un momento antes de salir
+                                // Esto evita el parpadeo blanco instantáneo
+                                Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                    CircularProgressIndicator()
+                                    LaunchedEffect(Unit) {
+                                        // Pequeña pausa de seguridad
+                                        kotlinx.coroutines.delay(100)
+                                        navController.popBackStack()
+                                    }
+                                }
                             }
                         }
 

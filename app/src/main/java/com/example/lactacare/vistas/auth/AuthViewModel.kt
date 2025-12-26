@@ -146,4 +146,8 @@ class AuthViewModel @Inject constructor(
             _password.value = ""
         }
     }
+    fun resetLoginState() {
+        _loginExitoso.value = false
+        _profileIncompleteData.value = null
+    }
 }

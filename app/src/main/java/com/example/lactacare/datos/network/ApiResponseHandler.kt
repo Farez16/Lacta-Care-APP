@@ -20,7 +20,7 @@ class ApiResponseHandler @Inject constructor() {
         }
     }
 
-    private fun parseErrorBody(response: Response<*>): String {
+    fun parseErrorBody(response: Response<*>): String {
         return try {
             val errorJson = response.errorBody()?.string()
             if (errorJson != null) {

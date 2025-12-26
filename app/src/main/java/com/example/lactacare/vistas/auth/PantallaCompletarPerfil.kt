@@ -57,6 +57,7 @@ fun PantallaCompletarPerfil(
     LaunchedEffect(loginExitoso) {
         if (loginExitoso) {
             onPerfilCompletado()
+            viewModel.resetLoginState()
         }
     }
 
