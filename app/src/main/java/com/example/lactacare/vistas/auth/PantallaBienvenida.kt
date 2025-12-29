@@ -109,10 +109,10 @@ fun PantallaBienvenida(
 
             // Tarjeta DOCTOR
             TarjetaRol(
-                titulo = "Doctor",
+                titulo = "Medico",
                 icono = Icons.Outlined.HealthAndSafety,
                 colorIcono = AccentDoctor,
-                onClick = { onRolSeleccionado(RolUsuario.DOCTOR) }
+                onClick = { onRolSeleccionado(RolUsuario.MEDICO) }
             )
 
             // Tarjeta ADMINISTRADOR

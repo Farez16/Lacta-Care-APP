@@ -1,5 +1,4 @@
 package com.example.lactacare.vistas.auth
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,25 +16,75 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.lactacare.dominio.model.RolUsuario
-
+import com.example.lactacare.vistas.components.ErrorDialog  // ⭐ AGREGAR
+import com.example.lactacare.vistas.components.ErrorDialogData
+import com.example.lactacare.vistas.components.ErrorType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PantallaRecuperarPassword(
+fun PantallaSolicitarCodigo(
     rolUsuario: RolUsuario,
     onVolver: () -> Unit,
-    viewModel: AuthViewModel = viewModel()
+    onCodigoEnviado: (String) -> Unit,
+    viewModel: RecuperarPasswordViewModel = hiltViewModel()
 ) {
-    var email by remember { mutableStateOf("") }
-    var emailEnviado by remember { mutableStateOf(false) }
-    var mensajeError by remember { mutableStateOf<String?>(null) }
+    var codigoEnviado by remember { mutableStateOf(false) }
+    val correo by viewModel.correo.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val mensaje by viewModel.mensaje.collectAsState()
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorDialogData by remember { mutableStateOf<ErrorDialogData?>(null) }
+
+    // ⭐ MOVER AQUÍ: Establecer rol en el ViewModel
+    LaunchedEffect(rolUsuario) {
+        viewModel.setRol(rolUsuario)
+    }
+
+    // ⭐ MOVER AQUÍ: Observar cambios en el mensaje para mostrar diálogos
+    LaunchedEffect(mensaje) {
+        mensaje?.let { msg ->
+            when {
+                msg.startsWith("GOOGLE_ACCOUNT:") -> {
+                    errorDialogData = ErrorDialogData(
+                        tipo = ErrorType.GOOGLE_ACCOUNT,
+                        titulo = "Cuenta de Google",
+                        mensaje = msg.replace("GOOGLE_ACCOUNT: ", "")
+                    )
+                    showErrorDialog = true
+                }
+                msg.startsWith("ROL_MISMATCH:") -> {
+                    errorDialogData = ErrorDialogData(
+                        tipo = ErrorType.ROL_MISMATCH,
+                        titulo = "Rol Incorrecto",
+                        mensaje = msg.replace("ROL_MISMATCH: ", "")
+                    )
+                    showErrorDialog = true
+                }
+                msg.startsWith("UNAUTHORIZED_EMAIL:") -> {
+                    errorDialogData = ErrorDialogData(
+                        tipo = ErrorType.UNAUTHORIZED_EMAIL,
+                        titulo = "Correo No Autorizado",
+                        mensaje = msg.replace("UNAUTHORIZED_EMAIL: ", "")
+                    )
+                    showErrorDialog = true
+                }
+                msg.startsWith("USER_NOT_FOUND:") -> {
+                    errorDialogData = ErrorDialogData(
+                        tipo = ErrorType.USER_NOT_FOUND,
+                        titulo = "Usuario No Encontrado",
+                        mensaje = msg.replace("USER_NOT_FOUND: ", "")
+                    )
+                    showErrorDialog = true
+                }
+            }
+        }
+    }
 
     // Colores según rol
     val colorPrincipal = when (rolUsuario) {
         RolUsuario.ADMINISTRADOR -> Color(0xFFA3C9A8)
-        RolUsuario.DOCTOR -> Color(0xFFB0C4DE)
+        RolUsuario.MEDICO -> Color(0xFFB0C4DE)
         RolUsuario.PACIENTE -> Color(0xFFFFC0CB)
     }
 
@@ -66,7 +115,7 @@ fun PantallaRecuperarPassword(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            if (!emailEnviado) {
+            if (!codigoEnviado) {
                 // FORMULARIO PARA INGRESAR EMAIL
                 Icon(
                     imageVector = Icons.Default.Email,
@@ -74,9 +123,7 @@ fun PantallaRecuperarPassword(
                     tint = colorPrincipal,
                     modifier = Modifier.size(80.dp)
                 )
-
                 Spacer(modifier = Modifier.height(24.dp))
-
                 Text(
                     text = "¿Olvidaste tu contraseña?",
                     fontSize = 24.sp,
@@ -84,26 +131,20 @@ fun PantallaRecuperarPassword(
                     color = Color(0xFF546E7A),
                     textAlign = TextAlign.Center
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 Text(
-                    text = "Ingresa tu correo electrónico y te enviaremos instrucciones para restablecer tu contraseña",
+                    text = "Ingresa tu correo electrónico y te enviaremos un código de 6 dígitos para restablecer tu contraseña",
                     fontSize = 14.sp,
                     color = Color.Gray,
                     textAlign = TextAlign.Center,
                     lineHeight = 20.sp
                 )
-
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // CAMPO EMAIL
                 OutlinedTextField(
-                    value = email,
-                    onValueChange = {
-                        email = it
-                        mensajeError = null
-                    },
+                    value = correo,
+                    onValueChange = { viewModel.setCorreo(it) },
                     label = { Text("Correo Electrónico") },
                     placeholder = { Text("tu@email.com") },
                     leadingIcon = {
@@ -118,12 +159,12 @@ fun PantallaRecuperarPassword(
                         cursorColor = colorPrincipal
                     ),
                     singleLine = true,
-                    isError = mensajeError != null
+                    isError = mensaje != null && !mensaje!!.contains("enviado")
                 )
 
-                if (mensajeError != null) {
+                if (mensaje != null && !mensaje!!.contains("enviado") && !mensaje!!.startsWith("GOOGLE_ACCOUNT:") && !mensaje!!.startsWith("ROL_MISMATCH:") && !mensaje!!.startsWith("UNAUTHORIZED_EMAIL:") && !mensaje!!.startsWith("USER_NOT_FOUND:")) {
                     Text(
-                        text = mensajeError!!,
+                        text = mensaje!!,
                         color = Color.Red,
                         fontSize = 12.sp,
                         modifier = Modifier
@@ -137,10 +178,8 @@ fun PantallaRecuperarPassword(
                 // BOTÓN ENVIAR
                 Button(
                     onClick = {
-                        viewModel.enviarRecuperacionPassword(
-                            email = email,
-                            onSuccess = { emailEnviado = true },
-                            onError = { error -> mensajeError = error }
+                        viewModel.solicitarCodigo(
+                            onSuccess = { codigoEnviado = true }
                         )
                     },
                     modifier = Modifier
@@ -151,16 +190,16 @@ fun PantallaRecuperarPassword(
                         containerColor = colorPrincipal,
                         contentColor = if (rolUsuario == RolUsuario.PACIENTE) Color(0xFF546E7A) else Color.White
                     ),
-                    enabled = !isLoading
+                    enabled = !isLoading && correo.isNotEmpty()
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            color = Color.White,
+                            color = if (rolUsuario == RolUsuario.PACIENTE) Color(0xFF546E7A) else Color.White,
                             modifier = Modifier.size(24.dp)
                         )
                     } else {
                         Text(
-                            "Enviar Instrucciones",
+                            "Enviar Código",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -180,7 +219,6 @@ fun PantallaRecuperarPassword(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-
             } else {
                 // PANTALLA DE CONFIRMACIÓN
                 Icon(
@@ -189,36 +227,29 @@ fun PantallaRecuperarPassword(
                     tint = Color(0xFF4CAF50),
                     modifier = Modifier.size(100.dp)
                 )
-
                 Spacer(modifier = Modifier.height(24.dp))
-
                 Text(
-                    text = "¡Correo Enviado!",
+                    text = "¡Código Enviado!",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF546E7A),
                     textAlign = TextAlign.Center
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 Text(
-                    text = "Te hemos enviado un correo a:",
+                    text = "Te hemos enviado un código de 6 dígitos a:",
                     fontSize = 14.sp,
                     color = Color.Gray,
                     textAlign = TextAlign.Center
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Text(
-                    text = email,
+                    text = correo,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = colorPrincipal,
                     textAlign = TextAlign.Center
                 )
-
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Card(
@@ -240,8 +271,8 @@ fun PantallaRecuperarPassword(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             "• Si no ves el correo, revisa tu carpeta de spam\n" +
-                                    "• El enlace expirará en 24 horas\n" +
-                                    "• Si no lo recibes, intenta nuevamente",
+                                    "• El código expirará en 15 minutos\n" +
+                                    "• Si no lo recibes, puedes solicitar uno nuevo",
                             fontSize = 13.sp,
                             color = Color.Gray,
                             lineHeight = 18.sp
@@ -252,7 +283,7 @@ fun PantallaRecuperarPassword(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
-                    onClick = onVolver,
+                    onClick = { onCodigoEnviado(correo) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -263,7 +294,7 @@ fun PantallaRecuperarPassword(
                     )
                 ) {
                     Text(
-                        "Volver al Inicio",
+                        "Ingresar Código",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -272,16 +303,28 @@ fun PantallaRecuperarPassword(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TextButton(
-                    onClick = { emailEnviado = false },
+                    onClick = { codigoEnviado = false },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        "Reenviar correo",
+                        "Reenviar código",
                         color = colorPrincipal,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
             }
         }
+    }
+
+    // ⭐ MOVER AQUÍ: Mostrar diálogo de error (FUERA del Scaffold)
+    if (showErrorDialog && errorDialogData != null) {
+        ErrorDialog(
+            data = errorDialogData!!,
+            onDismiss = {
+                showErrorDialog = false
+                errorDialogData = null
+                viewModel.setCorreo("")  // Limpiar correo
+            }
+        )
     }
 }

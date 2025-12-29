@@ -30,8 +30,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.lactacare.datos.dto.AuthState
 import com.example.lactacare.dominio.model.RolUsuario
-// IMPORTAMOS TUS COLORES DEFINIDOS EN EL TEMA
 import com.example.lactacare.vistas.theme.*
+import com.example.lactacare.vistas.components.ErrorDialog
+import com.example.lactacare.vistas.components.ErrorDialogData
+import com.example.lactacare.vistas.components.ErrorType
 
 @Composable
 fun PantallaLogin(
@@ -44,14 +46,15 @@ fun PantallaLogin(
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.mensajeError.collectAsState()
     val rol by viewModel.rolActual.collectAsState()
     val authState by viewModel.authState.collectAsState()
     val profileIncompleteData by viewModel.profileIncompleteData.collectAsState()
-
     var passwordVisible by remember { mutableStateOf(false) }
     var showCompletarPerfil by remember { mutableStateOf(false) }
 
+    // Estados para controlar diálogos
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorDialogData by remember { mutableStateOf<ErrorDialogData?>(null) }
     // 2. GOOGLE LAUNCHER
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -60,16 +63,56 @@ fun PantallaLogin(
             viewModel.handleGoogleSignInResult(result.data)
         }
     }
-
-    // 3. EFECTO DE NAVEGACIÓN
+    // 3. EFECTO DE NAVEGACIÓN Y MANEJO DE ERRORES
     LaunchedEffect(authState) {
-        when (authState) {
+        when (val state = authState) {
             is AuthState.Authenticated -> onLoginExitoso()
             is AuthState.ProfileIncomplete -> showCompletarPerfil = true
+
+            is AuthState.RolMismatch -> {
+                errorDialogData = ErrorDialogData(
+                    tipo = ErrorType.ROL_MISMATCH,
+                    titulo = "Rol Incorrecto",
+                    mensaje = state.mensaje,
+                    rolCorrecto = state.rolCorrecto
+                )
+                showErrorDialog = true
+            }
+            is AuthState.UnauthorizedEmail -> {
+                errorDialogData = ErrorDialogData(
+                    tipo = ErrorType.UNAUTHORIZED_EMAIL,
+                    titulo = "Correo No Autorizado",
+                    mensaje = state.mensaje
+                )
+                showErrorDialog = true
+            }
+            is AuthState.UserNotFound -> {
+                errorDialogData = ErrorDialogData(
+                    tipo = ErrorType.USER_NOT_FOUND,
+                    titulo = "Usuario No Encontrado",
+                    mensaje = state.mensaje
+                )
+                showErrorDialog = true
+            }
+            is AuthState.InvalidCredentials -> {
+                errorDialogData = ErrorDialogData(
+                    tipo = ErrorType.INVALID_CREDENTIALS,
+                    titulo = "Credenciales Incorrectas",
+                    mensaje = state.mensaje
+                )
+                showErrorDialog = true
+            }
+            is AuthState.GenericError -> {
+                errorDialogData = ErrorDialogData(
+                    tipo = ErrorType.GENERIC,
+                    titulo = "Error",
+                    mensaje = state.mensaje
+                )
+                showErrorDialog = true
+            }
             else -> {}
         }
     }
-
     // 4. MANEJO DE PERFIL INCOMPLETO (GOOGLE)
     if (showCompletarPerfil && profileIncompleteData != null) {
         PantallaCompletarPerfil(
@@ -86,45 +129,41 @@ fun PantallaLogin(
         )
         return
     }
-
-    // 5. CONFIGURACIÓN VISUAL SEGÚN ROL (USANDO COLOR.KT)
-    // Definimos una clase de datos temporal para organizar los colores
+    // 5. CONFIGURACIÓN VISUAL SEGÚN ROL
     data class TemaVisual(
         val titulo: String,
         val icono: ImageVector,
-        val colorPrimario: Color, // Botones, Focus
-        val colorFondo: Color,    // Scaffold
-        val colorIconoBg: Color,  // Fondo del cuadro del icono
-        val colorTexto: Color     // Títulos
+        val colorPrimario: Color,
+        val colorFondo: Color,
+        val colorIconoBg: Color,
+        val colorTexto: Color
     )
-
     val tema = when (rol) {
         RolUsuario.PACIENTE -> TemaVisual(
             titulo = "Bienvenida",
             icono = Icons.Default.ChildCare,
-            colorPrimario = MomPrimary,      // Rosado #FFC0CB
-            colorFondo = MomBackground,      // Blanco Rosado #FFF9FB
-            colorIconoBg = MomAccent,        // Rosado Claro #FFDDE2
-            colorTexto = SlateGray           // Gris Oscuro
+            colorPrimario = MomPrimary,
+            colorFondo = MomBackground,
+            colorIconoBg = MomAccent,
+            colorTexto = SlateGray
         )
-        RolUsuario.DOCTOR -> TemaVisual(
+        RolUsuario.MEDICO -> TemaVisual(
             titulo = "Portal Médicos",
             icono = Icons.Default.HealthAndSafety,
-            colorPrimario = DoctorPrimary,   // Azul #42A5F5
-            colorFondo = DoctorBackground,   // Azul Suave #E3F2FD
-            colorIconoBg = Color(0xFFBBDEFB),// Azul intermedio para el icono
+            colorPrimario = DoctorPrimary,
+            colorFondo = DoctorBackground,
+            colorIconoBg = Color(0xFFBBDEFB),
             colorTexto = SlateGray
         )
         RolUsuario.ADMINISTRADOR -> TemaVisual(
             titulo = "Administración",
             icono = Icons.Default.Apartment,
-            colorPrimario = AdminPrimary,    // Verde #66BB6A
-            colorFondo = AdminBackground,    // Verde Suave #E8F5E9
-            colorIconoBg = Color(0xFFC8E6C9),// Verde intermedio
+            colorPrimario = AdminPrimary,
+            colorFondo = AdminBackground,
+            colorIconoBg = Color(0xFFC8E6C9),
             colorTexto = SlateGray
         )
     }
-
     // 6. UI PRINCIPAL
     Scaffold(containerColor = tema.colorFondo) { padding ->
         Column(
@@ -136,18 +175,13 @@ fun PantallaLogin(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(40.dp))
-
-            // Título Principal
             Text(
                 text = "LactaCare",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = tema.colorTexto
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Icono Central con Color Dinámico
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -158,24 +192,17 @@ fun PantallaLogin(
                     imageVector = tema.icono,
                     contentDescription = null,
                     modifier = Modifier.size(70.dp),
-                    tint = tema.colorPrimario // El icono toma el color fuerte
+                    tint = tema.colorPrimario
                 )
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Subtítulo (Portal Médico, etc)
             Text(
                 text = tema.titulo,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = tema.colorTexto
             )
-
             Spacer(modifier = Modifier.height(32.dp))
-
-            // -- CAMPOS DE TEXTO --
-
             // Email
             CampoTextoLogin(
                 label = "Correo Electrónico",
@@ -184,9 +211,7 @@ fun PantallaLogin(
                 colorFocus = tema.colorPrimario,
                 onCambio = { viewModel.onEmailChange(it) }
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
             // Contraseña
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
@@ -217,26 +242,12 @@ fun PantallaLogin(
                     singleLine = true
                 )
             }
-
-            // Recuperar Contraseña (Link)
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 TextButton(onClick = onIrARecuperarPassword) {
                     Text("¿Olvidaste tu contraseña?", color = SlateGray, fontSize = 12.sp)
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            // MENSAJE DE ERROR
-            if (error != null) {
-                Text(
-                    text = error ?: "",
-                    color = Color.Red,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
             // BOTÓN LOGIN
             Button(
                 onClick = { viewModel.login() },
@@ -246,7 +257,7 @@ fun PantallaLogin(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = tema.colorPrimario,
-                    contentColor = White // Texto blanco para contraste
+                    contentColor = White
                 ),
                 enabled = !isLoading
             ) {
@@ -256,9 +267,7 @@ fun PantallaLogin(
                     Text("Iniciar Sesión", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             // BOTÓN GOOGLE
             OutlinedButton(
                 onClick = { googleSignInLauncher.launch(viewModel.getGoogleSignInIntent()) },
@@ -269,18 +278,11 @@ fun PantallaLogin(
                 border = BorderStroke(1.dp, BordeGrisClean),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = SlateGray)
             ) {
-                // Aquí podrías poner un icono de Google si tienes el drawable
                 Text("Continuar con Google", fontWeight = FontWeight.SemiBold)
             }
-
             Spacer(modifier = Modifier.height(32.dp))
-
-            // FOOTER: REGISTRO (SOLO PARA PACIENTES)
-            // Lógica: Empleados (Doctores/Admins) no se registran por app.
             if (rol == RolUsuario.PACIENTE) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("¿No tienes cuenta? ", color = SlateGray)
                     Text(
                         text = "Regístrate aquí",
@@ -290,12 +292,21 @@ fun PantallaLogin(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+    // 7. DIÁLOGO UNIFICADO DE ERRORES (USANDO COMPONENTE COMPARTIDO)
+    if (showErrorDialog && errorDialogData != null) {
+        ErrorDialog(
+            data = errorDialogData!!,
+            onDismiss = {
+                showErrorDialog = false
+                errorDialogData = null
+                viewModel.resetLoginState()
+            }
+        )
+    }
 }
-
 @Composable
 fun CampoTextoLogin(
     label: String,

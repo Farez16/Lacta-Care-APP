@@ -6,7 +6,7 @@ package com.example.lactacare.dominio.model
 */
 enum class RolUsuario {
     PACIENTE,
-    DOCTOR,
+    MEDICO,
     ADMINISTRADOR;
 
     companion object {
@@ -17,7 +17,7 @@ enum class RolUsuario {
         fun fromString(rol: String): RolUsuario {
             return when (rol.uppercase()) {
                 "PACIENTE" -> PACIENTE
-                "DOCTOR" -> DOCTOR
+                "MEDICO" -> MEDICO
                 "ADMINISTRADOR", "ADMIN" -> ADMINISTRADOR
                 else -> PACIENTE // Por defecto
             }

@@ -77,7 +77,7 @@ class CrearDoctorViewModel @Inject constructor(
                 correo = state.correo,
                 telefono = state.telefono,
                 fechaNacimiento = formatearFecha(state.fechaNacimiento.ifBlank { "1990-01-01" }), 
-                rol = "DOCTOR"
+                rol = "MEDICO"
             )
 
             val result = repository.crearDoctor(request)

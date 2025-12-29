@@ -15,18 +15,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.lactacare.datos.dto.AuthState
 import com.example.lactacare.datos.dto.GoogleUserData
 import com.example.lactacare.vistas.theme.SlateGray
+import com.example.lactacare.vistas.components.ErrorDialog
+import com.example.lactacare.vistas.components.ErrorDialogData
+import com.example.lactacare.vistas.components.ErrorType
 
 // Colores fijos para Paciente
-val PatientColor = Color(0xFFFFC0CB) // Rosa Pastel
-val PatientColorDark = Color(0xFFF06292) // Rosa más oscuro para textos
-
+val PatientColor = Color(0xFFFFC0CB)
+val PatientColorDark = Color(0xFFF06292)
 @Composable
 fun PantallaCompletarPerfil(
     viewModel: AuthViewModel = hiltViewModel(),
@@ -36,23 +38,20 @@ fun PantallaCompletarPerfil(
 ) {
     // --- ESTADOS DEL FORMULARIO ---
     var cedula by remember { mutableStateOf("") }
-
-    // Pre-llenamos con datos que vienen de Google
     var primerNombre by remember { mutableStateOf(googleUserData.givenName ?: "") }
     var segundoNombre by remember { mutableStateOf("") }
     var primerApellido by remember { mutableStateOf(googleUserData.familyName ?: "") }
     var segundoApellido by remember { mutableStateOf("") }
-
     var telefono by remember { mutableStateOf("") }
     var fechaNacimiento by remember { mutableStateOf("") }
     var discapacidad by remember { mutableStateOf("Ninguna") }
-
-    // --- ESTADOS DEL VIEWMODEL (CORREGIDO: Se agrega 'initial') ---
-    // Esto soluciona el error "Cannot infer type" asegurando un valor por defecto
+    // --- ESTADOS DEL VIEWMODEL ---
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
-    val mensajeError by viewModel.mensajeError.collectAsState(initial = null)
     val loginExitoso by viewModel.loginExitoso.collectAsState(initial = false)
-
+    val authState by viewModel.authState.collectAsState(initial = AuthState.Idle)
+    // Estados para diálogo de error
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorDialogData by remember { mutableStateOf<ErrorDialogData?>(null) }
     // --- EFECTOS ---
     LaunchedEffect(loginExitoso) {
         if (loginExitoso) {
@@ -60,7 +59,21 @@ fun PantallaCompletarPerfil(
             viewModel.resetLoginState()
         }
     }
-
+    // Observar errores desde authState
+    LaunchedEffect(authState) {
+        when (val state = authState) {
+            is AuthState.GenericError -> {
+                errorDialogData = ErrorDialogData(
+                    tipo = ErrorType.GENERIC,
+                    titulo = "Error al Completar Perfil",
+                    mensaje = state.mensaje
+                )
+                showErrorDialog = true
+            }
+            // Puedes agregar más casos si el backend retorna errores específicos
+            else -> {}
+        }
+    }
     Scaffold(
         containerColor = Color(0xFFFEFEFE)
     ) { padding ->
@@ -73,7 +86,6 @@ fun PantallaCompletarPerfil(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(32.dp))
-
             // HEADER
             Text(
                 text = "Completa tu Perfil",
@@ -81,7 +93,6 @@ fun PantallaCompletarPerfil(
                 fontWeight = FontWeight.Bold,
                 color = SlateGray
             )
-
             Text(
                 text = "Registro de Paciente",
                 fontSize = 16.sp,
@@ -89,12 +100,9 @@ fun PantallaCompletarPerfil(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 4.dp)
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
-            // TARJETA DE USUARIO GOOGLE (Visualización)
+            // TARJETA DE USUARIO GOOGLE
             if (googleUserData.picture != null) {
-                // CORRECCIÓN: Usamos ElevatedCard para la sombra correcta
                 ElevatedCard(
                     modifier = Modifier.size(100.dp),
                     shape = RoundedCornerShape(50.dp),
@@ -106,25 +114,20 @@ fun PantallaCompletarPerfil(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Text(
                     text = googleUserData.name,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp,
                     color = SlateGray
                 )
-
                 Text(
                     text = googleUserData.email,
                     fontSize = 14.sp,
                     color = Color.Gray
                 )
             }
-
             Spacer(modifier = Modifier.height(32.dp))
-
             // INFO CARD
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -152,9 +155,7 @@ fun PantallaCompletarPerfil(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(24.dp))
-
             // --- FORMULARIO DE DATOS ---
             Text(
                 text = "Datos Personales",
@@ -163,9 +164,7 @@ fun PantallaCompletarPerfil(
                 color = PatientColorDark,
                 modifier = Modifier.fillMaxWidth()
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
             CampoCompletarPerfil(
                 label = "Cédula *",
                 valor = cedula,
@@ -174,7 +173,6 @@ fun PantallaCompletarPerfil(
                 teclado = KeyboardType.Number,
                 colorFocus = PatientColorDark
             ) { cedula = it }
-
             CampoCompletarPerfil(
                 label = "Primer Nombre *",
                 valor = primerNombre,
@@ -182,7 +180,6 @@ fun PantallaCompletarPerfil(
                 icon = Icons.Outlined.Person,
                 colorFocus = PatientColorDark
             ) { primerNombre = it }
-
             CampoCompletarPerfil(
                 label = "Segundo Nombre",
                 valor = segundoNombre,
@@ -190,7 +187,6 @@ fun PantallaCompletarPerfil(
                 icon = Icons.Outlined.Person,
                 colorFocus = PatientColorDark
             ) { segundoNombre = it }
-
             CampoCompletarPerfil(
                 label = "Primer Apellido *",
                 valor = primerApellido,
@@ -198,7 +194,6 @@ fun PantallaCompletarPerfil(
                 icon = Icons.Outlined.Person,
                 colorFocus = PatientColorDark
             ) { primerApellido = it }
-
             CampoCompletarPerfil(
                 label = "Segundo Apellido",
                 valor = segundoApellido,
@@ -206,7 +201,6 @@ fun PantallaCompletarPerfil(
                 icon = Icons.Outlined.Person,
                 colorFocus = PatientColorDark
             ) { segundoApellido = it }
-
             CampoCompletarPerfil(
                 label = "Teléfono *",
                 valor = telefono,
@@ -215,7 +209,6 @@ fun PantallaCompletarPerfil(
                 teclado = KeyboardType.Phone,
                 colorFocus = PatientColorDark
             ) { telefono = it }
-
             CampoCompletarPerfil(
                 label = "Fecha Nacimiento (YYYY-MM-DD) *",
                 valor = fechaNacimiento,
@@ -223,7 +216,6 @@ fun PantallaCompletarPerfil(
                 icon = Icons.Outlined.DateRange,
                 colorFocus = PatientColorDark
             ) { fechaNacimiento = it }
-
             CampoCompletarPerfil(
                 label = "Discapacidad (Opcional)",
                 valor = discapacidad,
@@ -231,20 +223,7 @@ fun PantallaCompletarPerfil(
                 icon = Icons.Outlined.Accessible,
                 colorFocus = PatientColorDark
             ) { discapacidad = it }
-
             Spacer(modifier = Modifier.height(24.dp))
-
-            // MENSAJES DE ERROR
-            if (mensajeError != null) {
-                Text(
-                    text = mensajeError!!,
-                    color = Color.Red,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
             // BOTÓN COMPLETAR
             Button(
                 onClick = {
@@ -281,9 +260,7 @@ fun PantallaCompletarPerfil(
                     Text("Completar Registro", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             // BOTÓN CANCELAR
             OutlinedButton(
                 onClick = onCancelar,
@@ -298,12 +275,21 @@ fun PantallaCompletarPerfil(
             ) {
                 Text("Cancelar", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
-
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+    // DIÁLOGO DE ERROR (USANDO COMPONENTE COMPARTIDO)
+    if (showErrorDialog && errorDialogData != null) {
+        ErrorDialog(
+            data = errorDialogData!!,
+            onDismiss = {
+                showErrorDialog = false
+                errorDialogData = null
+                viewModel.resetLoginState()
+            }
+        )
+    }
 }
-
 // COMPONENTE AUXILIAR
 @Composable
 fun CampoCompletarPerfil(

@@ -24,7 +24,18 @@ data class RegisterPacienteRequest(
 )
 
 data class GoogleAuthRequest(
-    @SerializedName("idToken") val idToken: String
+    @SerializedName("idToken") val idToken: String,
+    @SerializedName("platform") val platform: String? = "ANDROID",
+
+    /**
+     * NUEVO: Tipo de usuario solicitado
+     * Valores: "PACIENTE", "MEDICO", "ADMINISTRADOR"
+     *
+     * El backend usa este campo para validar que el rol del usuario
+     * coincida con el endpoint usado y el rol seleccionado en la app
+     */
+    @SerializedName("tipoUsuario")
+    val tipoUsuario: String? = null
 )
 
 // --- RESPONSES (MODIFICADO PARA SOPORTAR CASO 202) ---

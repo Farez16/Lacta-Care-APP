@@ -46,7 +46,7 @@ fun PantallaHome(
     // 1. Configuración de Menú y Colores
     val (itemsMenu, colorPrincipal) = when (rolUsuario) {
         RolUsuario.PACIENTE -> Pair(menuPaciente, MomPrimary)
-        RolUsuario.DOCTOR -> Pair(menuAdmin, DoctorPrimary)
+        RolUsuario.MEDICO -> Pair(menuAdmin, DoctorPrimary)
         RolUsuario.ADMINISTRADOR -> Pair(menuAdmin, AdminPrimary)
     }
 
@@ -108,7 +108,7 @@ fun PantallaHome(
                 // --- RUTAS ADMIN ---
                 composable(ItemMenu.AdminDashboard.ruta) {
                     when (rolUsuario) {
-                        RolUsuario.DOCTOR -> {
+                        RolUsuario.MEDICO -> {
                             PantallaHomeDoctor(
                                 onLogout = {
                                     viewModel.cerrarSesion()
@@ -146,7 +146,7 @@ fun PantallaHome(
                 }
                 composable(ItemMenu.AdminPerfil.ruta) { 
                     when (rolUsuario) {
-                        RolUsuario.DOCTOR -> {
+                        RolUsuario.MEDICO -> {
                             PantallaPerfilDoctor(onLogout = onLogout)
                         }
                         else -> {
