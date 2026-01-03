@@ -3,8 +3,11 @@ package com.example.lactacare.vistas.chat
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.lactacare.datos.location.LocationHelper
+import com.example.lactacare.dominio.repository.ChatRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -13,53 +16,69 @@ data class MensajeChat(
     val esUsuario: Boolean,
     val esAnimacionEscribiendo: Boolean = false
 )
-
 @HiltViewModel
-class ChatViewModel @Inject constructor() : ViewModel() {
-
-    // Lista observable de mensajes
+class ChatViewModel @Inject constructor(
+    private val chatRepository: ChatRepository,
+    private val locationHelper: LocationHelper
+) : ViewModel() {
     val mensajes = mutableStateListOf<MensajeChat>()
 
+    private val _usarUbicacion = MutableStateFlow(false)
+    val usarUbicacion = _usarUbicacion.asStateFlow()
     init {
-        // Mensaje de bienvenida
-        mensajes.add(MensajeChat("¡Hola! Soy tu asistente de lactancia. ¿Cómo puedo ayudarte hoy?", false))
+        mensajes.add(MensajeChat("¡Hola! Soy LactaBot. ¿Cómo puedo ayudarte hoy?", false))
     }
-
+    fun toggleUbicacion() {
+        _usarUbicacion.value = !_usarUbicacion.value
+    }
     fun enviarMensaje(texto: String) {
         if (texto.isBlank()) return
-
         // 1. Agregar mensaje del usuario
         mensajes.add(MensajeChat(texto, true))
-
-        // 2. Simular "Escribiendo..."
+        // 2. Mostrar "Escribiendo..."
         viewModelScope.launch {
             val loadingMsg = MensajeChat("", false, true)
             mensajes.add(loadingMsg)
-            
-            delay(1500) // Simular red
-            
+
+            // 3. Obtener ubicación si está activada
+            var latitud: Double? = null
+            var longitud: Double? = null
+
+            if (_usarUbicacion.value && locationHelper.hasLocationPermission()) {
+                val coords = locationHelper.getCoordinates()
+                latitud = coords?.first
+                longitud = coords?.second
+
+                // LOG para debug
+                println("📍 Enviando ubicación: lat=$latitud, lon=$longitud")
+            }
+
+            // 4. Llamar al backend
+            val result = chatRepository.preguntarChatbot(texto, latitud, longitud)
+
             mensajes.remove(loadingMsg)
 
-            // 3. Respuesta Mock Inteligente
-            val respuesta = generarRespuestaMock(texto)
-            mensajes.add(MensajeChat(respuesta, false))
+            result.onSuccess { respuesta ->
+                mensajes.add(MensajeChat(respuesta, false))
+            }.onFailure { error ->
+                mensajes.add(MensajeChat(
+                    "Lo siento, hubo un error: ${error.message}",
+                    false
+                ))
+            }
         }
-        //hola
     }
 
-    private fun generarRespuestaMock(input: String): String {
-        val q = input.lowercase()
-        return when {
-            q.contains("Dolor") -> "Si tienes dolor al amamantar, puede deberse a un mal agarre. Intenta asegurar que la boca del bebé cubra gran parte de la areola, no solo el pezón."
-            q.contains("produc") || q.contains("leche") -> "Para aumentar la producción, lo más efectivo es la succión frecuente. Intenta amamantar a demanda y mantente bien hidratada."
-            q.contains("guardar") || q.contains("congelar") -> "La leche materna dura: \n- 4 horas a temperatura ambiente.\n- 4 días en el refrigerador.\n- 6 meses en el congelador."
-            q.contains("horario") -> "Se recomienda evitar horarios estrictos al inicio y amamantar a demanda, cada vez que el bebé muestre señales de hambre."
-            else -> "Entiendo tu consulta. Como soy una IA en entrenamiento, te sugiero consultar la sección 'Informativo' o acudir a un especialista si es urgente."
-        }
+    fun hasLocationPermission(): Boolean {
+        return locationHelper.hasLocationPermission()
     }
-    ///qaaa
-    //aaaaa
-    //aaa
-    //aaaa
-    ///aaaaaaa
+
+    /**
+     * Limpia el chat y reinicia con mensaje de bienvenida
+     */
+    fun limpiarChat() {
+        mensajes.clear()
+        mensajes.add(MensajeChat("¡Hola! Soy LactaBot. ¿Cómo puedo ayudarte hoy?", false))
+        _usarUbicacion.value = false
+    }
 }

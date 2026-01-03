@@ -9,6 +9,8 @@ import retrofit2.http.POST
 import retrofit2.http.Body
 
 import com.example.lactacare.datos.dto.ContenedorLecheDto
+import com.example.lactacare.datos.dto.PreguntaRequest
+import retrofit2.http.Headers
 import retrofit2.http.PUT
 import retrofit2.http.Path
 
@@ -59,4 +61,9 @@ interface ApiService {
 
     @POST("api/reservas")
     suspend fun crearReserva(@Body request: com.example.lactacare.datos.dto.CrearReservaRequest): Response<Any>
+
+    // CHATBOT
+    @POST("api/chat/preguntar")
+    @Headers("Accept: text/plain")
+    suspend fun preguntarChatbot(@Body request: PreguntaRequest): Response<String>
 }

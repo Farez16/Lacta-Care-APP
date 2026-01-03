@@ -1,11 +1,13 @@
 package com.example.lactacare.di
 
 import com.example.lactacare.datos.repository.AuthRepositoryImpl
+import com.example.lactacare.datos.repository.ChatRepositoryImpl
 import com.example.lactacare.datos.repository.DoctorRepository
 import com.example.lactacare.datos.repository.InventoryRepository
 import com.example.lactacare.datos.repository.LactariosRepository
 import com.example.lactacare.datos.repository.PatientRepository
 import com.example.lactacare.dominio.repository.AuthRepository
+import com.example.lactacare.dominio.repository.ChatRepository
 import com.example.lactacare.dominio.repository.IDoctorRepository
 import com.example.lactacare.dominio.repository.IInventoryRepository
 import com.example.lactacare.dominio.repository.ILactariosRepository
@@ -49,4 +51,10 @@ abstract class RepositoryModule {
     abstract fun bindPatientRepository(
         patientRepository: PatientRepository
     ): IPatientRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindChatRepository(
+        impl: ChatRepositoryImpl
+    ): ChatRepository
 }

@@ -114,4 +114,10 @@ dependencies {
 
     // --- AGREGADO: Hilt para Compose (Para usar hiltViewModel()) ---
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
+
+     //AGREGADO PLAY SERVICES (UBICACION)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 }

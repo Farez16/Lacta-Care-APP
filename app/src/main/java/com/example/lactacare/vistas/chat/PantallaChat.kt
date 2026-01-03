@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,8 +28,9 @@ fun PantallaChat(
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     var textoInput by remember { mutableStateOf("") }
-    val mensajes = viewModel.mensajes // Observable list
-
+    val mensajes = viewModel.mensajes
+    val usarUbicacion by viewModel.usarUbicacion.collectAsState()
+    val tienePermisoUbicacion = viewModel.hasLocationPermission()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -42,15 +44,46 @@ fun PantallaChat(
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                "Tu Asistente de Lactancia",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextoOscuroClean
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "Tu Asistente de Lactancia",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextoOscuroClean
+                )
+
+                // Toggle de ubicación
+                if (tienePermisoUbicacion) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = if (usarUbicacion) MomPrimary else Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            if (usarUbicacion) "Ubicación activada" else "Ubicación desactivada",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Switch(
+                            checked = usarUbicacion,
+                            onCheckedChange = { viewModel.toggleUbicacion() },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MomPrimary,
+                                checkedTrackColor = MomPrimary.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                }
+            }
         }
         Divider(color = Color(0xFFE5E7EB))
-
         // --- 2. LISTA DE MENSAJES ---
         LazyColumn(
             modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
@@ -80,12 +113,10 @@ fun PantallaChat(
                     }
                 }
             }
-
             items(mensajes) { msg ->
                 BurbujaMensaje(msg)
             }
         }
-
         // --- 3. SUGERENCIAS Y INPUT ---
         Column(
             modifier = Modifier
@@ -96,21 +127,22 @@ fun PantallaChat(
             if (mensajes.size < 4) {
                 Text("Sugerencias", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextoOscuroClean)
                 Spacer(Modifier.height(8.dp))
-
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val suggestions = listOf("Aumentar producción", "Extracción", "Almacenamiento")
+                    val suggestions = listOf("Salas cercanas", "Aumentar producción", "Almacenamiento")
                     items(suggestions) { text ->
                         SuggestionChip(
                             onClick = { viewModel.enviarMensaje(text) },
                             label = { Text(text, color = TextoOscuroClean, fontSize = 12.sp) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(containerColor = MomPrimary.copy(alpha = 0.2f), labelColor = TextoOscuroClean),
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MomPrimary.copy(alpha = 0.2f),
+                                labelColor = TextoOscuroClean
+                            ),
                             border = null
                         )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
             }
-
             // Input
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
@@ -143,14 +175,15 @@ fun PantallaChat(
         }
     }
 }
-
 @Composable
 fun BurbujaMensaje(msg: MensajeChat) {
     val alignment = if (msg.esUsuario) Alignment.End else Alignment.Start
     val colorBurbuja = if (msg.esUsuario) MomPrimary else Color.White
     val colorTexto = if (msg.esUsuario) Color.White else TextoOscuroClean
-    val shape = if (msg.esUsuario) RoundedCornerShape(16.dp, 16.dp, 0.dp, 16.dp) else RoundedCornerShape(16.dp, 16.dp, 16.dp, 0.dp)
-
+    val shape = if (msg.esUsuario)
+        RoundedCornerShape(16.dp, 16.dp, 0.dp, 16.dp)
+    else
+        RoundedCornerShape(16.dp, 16.dp, 16.dp, 0.dp)
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = alignment) {
         Text(
             text = if (msg.esUsuario) "Tú" else "Asistente AI",
@@ -165,7 +198,13 @@ fun BurbujaMensaje(msg: MensajeChat) {
             shadowElevation = 1.dp
         ) {
             if (msg.esAnimacionEscribiendo) {
-                Text("Escribiendo...", modifier = Modifier.padding(12.dp), fontSize = 14.sp, color = colorTexto, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                Text(
+                    "Escribiendo...",
+                    modifier = Modifier.padding(12.dp),
+                    fontSize = 14.sp,
+                    color = colorTexto,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                )
             } else {
                 Text(
                     text = msg.texto,

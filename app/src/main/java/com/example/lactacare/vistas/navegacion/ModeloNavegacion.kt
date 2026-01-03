@@ -28,7 +28,6 @@ sealed class ItemMenu(
 val menuPaciente = listOf(
     ItemMenu.PacienteInicio,
     ItemMenu.PacienteBebe,
-    ItemMenu.PacienteChat,
     ItemMenu.PacientePerfil
 )
 

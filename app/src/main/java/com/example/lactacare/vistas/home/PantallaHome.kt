@@ -82,14 +82,13 @@ fun PantallaHome(
             ) {
                 // --- RUTAS PACIENTE ---
                 composable(ItemMenu.PacienteInicio.ruta) {
-                     PantallaHomePaciente(
-                         nombreUsuario = uiState.nombreUsuario,
-                         onLogout = onLogout,
-                         onNavReservas = goReservas,
-                         onNavBebe = onNavBebe,
-                         onNavInfo = { _ -> onNavInfo() },
-                         onNavChat = { navController.navigate(ItemMenu.PacienteChat.ruta) }
-                     )
+                    PantallaHomePaciente(
+                        nombreUsuario = uiState.nombreUsuario,
+                        onLogout = onLogout,
+                        onNavReservas = goReservas,
+                        onNavBebe = onNavBebe,
+                        onNavInfo = { _ -> onNavInfo() }
+                    )
                 }
                 composable(ItemMenu.PacienteBebe.ruta) { 
                     PantallaAnadirBebe(onVolver = { navController.popBackStack() })

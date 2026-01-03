@@ -21,48 +21,55 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.lactacare.datos.dto.ReservaPacienteDto
+import com.example.lactacare.vistas.chat.BurbujaChatFlotante
 import com.example.lactacare.vistas.theme.*
 
 @Composable
 fun PantallaHomePaciente(
     nombreUsuario: String,
-    onLogout: () -> Unit, // Para el perfil
+    onLogout: () -> Unit,
     onNavReservas: () -> Unit,
     onNavBebe: () -> Unit,
     onNavInfo: (String) -> Unit,
-    onNavChat: () -> Unit, // Agregado para el Chat
     viewModel: PatientHomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    
-    // Si queremos cargar al volver a la pantalla
+    var mostrarChat by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         viewModel.cargarDatosDashboard()
     }
-
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavChat,
-                containerColor = MomPrimary,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Filled.SmartToy, contentDescription = "Chat IA")
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { mostrarChat = true },
+                    containerColor = MomPrimary,
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Filled.SmartToy, contentDescription = "Chat IA")
+                }
             }
+        ) { padding ->
+            DashboardPacienteContent(
+                modifier = Modifier.padding(padding),
+                proximaCita = uiState.proximaCita,
+                nombreBebe = uiState.nombreBebe,
+                onNavReservas = onNavReservas,
+                onNavBebe = onNavBebe,
+                onNavInfo = onNavInfo
+            )
         }
-    ) { padding ->
-        DashboardPacienteContent(
-            modifier = Modifier.padding(padding),
-            proximaCita = uiState.proximaCita,
-            nombreBebe = uiState.nombreBebe,
-            onNavReservas = onNavReservas,
-            onNavBebe = onNavBebe,
-            onNavInfo = onNavInfo
-        )
+
+        // Burbuja flotante del chat
+        if (mostrarChat) {
+            BurbujaChatFlotante(
+                onCerrar = { mostrarChat = false }
+            )
+        }
     }
 }
-
 @Composable
 fun DashboardPacienteContent(
     modifier: Modifier = Modifier,
