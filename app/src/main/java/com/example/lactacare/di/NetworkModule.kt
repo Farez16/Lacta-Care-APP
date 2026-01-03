@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.lactacare.R
 import com.example.lactacare.datos.network.AuthApiService
 import com.example.lactacare.datos.network.ApiService // <--- IMPORTANTE: Importamos el nuevo servicio
+import com.example.lactacare.datos.network.DocumentosApiService // <--- NUEVO
 import com.example.lactacare.datos.network.AuthInterceptor
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -67,6 +68,12 @@ object NetworkModule {
         return retrofit.create(ApiService::class.java)
     }
     // ------------------------------------------------------------------
+    
+    @Provides
+    @Singleton
+    fun provideDocumentosApiService(retrofit: Retrofit): DocumentosApiService {
+        return retrofit.create(DocumentosApiService::class.java)
+    }
 
     @Provides
     @Singleton

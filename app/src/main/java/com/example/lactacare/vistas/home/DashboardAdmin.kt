@@ -24,6 +24,7 @@ fun DashboardAdmin(
     colorAcento: Color,
     stats: DashboardAdminStats?,
     onNavGestion: () -> Unit = {},
+    onNavAlertas: () -> Unit = {}, // Nuevo parametro
     onNavReportes: () -> Unit = {}
 ) {
     if (stats == null) {
@@ -88,7 +89,14 @@ fun DashboardAdmin(
                     AdminStatCard(Modifier.weight(1f), "Citas Hoy", stats.citasHoy.toString(), Icons.Outlined.Event, colorPrincipal)
 
                     val colorAlerta = if (stats.alertasActivas > 0) Color(0xFFEF5350) else Color.Gray
-                    AdminStatCard(Modifier.weight(1f), "Alertas", stats.alertasActivas.toString(), Icons.Outlined.Warning, colorAlerta)
+                    AdminStatCard(
+                        Modifier.weight(1f), 
+                        "Alertas", 
+                        stats.alertasActivas.toString(), 
+                        Icons.Outlined.Warning, 
+                        colorAlerta,
+                        onClick = onNavAlertas // Conectado
+                    )
                 }
             }
         }

@@ -49,4 +49,10 @@ abstract class RepositoryModule {
     abstract fun bindPatientRepository(
         patientRepository: PatientRepository
     ): IPatientRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAlertasRepository(
+        alertasRepository: com.example.lactacare.datos.repository.AlertasRepository
+    ): com.example.lactacare.dominio.repository.IAlertasRepository
 }

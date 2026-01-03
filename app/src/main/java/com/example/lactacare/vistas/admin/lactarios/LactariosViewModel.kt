@@ -46,4 +46,29 @@ class LactariosViewModel @Inject constructor(
             }
         }
     }
+
+    fun crearLactario(sala: SalaLactanciaDto) {
+        viewModelScope.launch {
+            val result = repository.crearSala(sala)
+            if (result.isSuccess) cargarSalas() else manejarError(result.exceptionOrNull())
+        }
+    }
+
+    fun editarLactario(id: Long, sala: SalaLactanciaDto) {
+        viewModelScope.launch {
+            val result = repository.editarSala(id, sala)
+            if (result.isSuccess) cargarSalas() else manejarError(result.exceptionOrNull())
+        }
+    }
+
+    fun eliminarLactario(id: Long) {
+        viewModelScope.launch {
+            val result = repository.eliminarSala(id)
+            if (result.isSuccess) cargarSalas() else manejarError(result.exceptionOrNull())
+        }
+    }
+
+    private fun manejarError(e: Throwable?) {
+        _uiState.value = _uiState.value.copy(error = e?.message ?: "Ocurrió un error")
+    }
 }

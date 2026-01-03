@@ -9,6 +9,7 @@ import retrofit2.http.POST
 import retrofit2.http.Body
 
 import com.example.lactacare.datos.dto.ContenedorLecheDto
+import retrofit2.http.DELETE
 import retrofit2.http.PUT
 import retrofit2.http.Path
 
@@ -40,9 +41,41 @@ interface ApiService {
         @Body contenedor: ContenedorLecheDto
     ): Response<ContenedorLecheDto>
 
-    // 6. SALAS DE LACTANCIA
+    // 6.    // --- LACTARIOS ---
     @GET("api/lactarios")
-    suspend fun obtenerSalasLactancia(): Response<List<com.example.lactacare.datos.dto.SalaLactanciaDto>>
+    suspend fun obtenerLactarios(): Response<List<com.example.lactacare.datos.dto.SalaLactanciaDto>>
+
+    @POST("api/lactarios")
+    suspend fun crearLactario(@Body lactario: com.example.lactacare.datos.dto.SalaLactanciaDto): Response<com.example.lactacare.datos.dto.SalaLactanciaDto>
+
+    @PUT("api/lactarios/{id}")
+    suspend fun editarLactario(
+        @Path("id") id: Long,
+        @Body lactario: com.example.lactacare.datos.dto.SalaLactanciaDto
+    ): Response<com.example.lactacare.datos.dto.SalaLactanciaDto>
+
+    @DELETE("api/lactarios/{id}")
+    suspend fun eliminarLactario(@Path("id") id: Long): Response<Unit>
+
+    // --- ALERTAS ---
+    @GET("api/sistema-alertas")
+    suspend fun obtenerAlertas(): Response<List<com.example.lactacare.datos.dto.SistemaAlertaDto>>
+
+    // --- REFRIGERADORES ---
+    @GET("api/refrigeradores")
+    suspend fun obtenerRefrigeradores(): Response<List<com.example.lactacare.datos.dto.RefrigeradorDto>>
+
+    @POST("api/refrigeradores")
+    suspend fun crearRefrigerador(@Body refri: com.example.lactacare.datos.dto.RefrigeradorDto): Response<com.example.lactacare.datos.dto.RefrigeradorDto>
+
+    @PUT("api/refrigeradores/{id}")
+    suspend fun editarRefrigerador(
+        @Path("id") id: Long, 
+        @Body refri: com.example.lactacare.datos.dto.RefrigeradorDto
+    ): Response<com.example.lactacare.datos.dto.RefrigeradorDto>
+
+    @DELETE("api/refrigeradores/{id}")
+    suspend fun eliminarRefrigerador(@Path("id") id: Long): Response<Unit>
 
     // 7. DOCTOR
     @GET("api/reservas/fecha/{fecha}")
