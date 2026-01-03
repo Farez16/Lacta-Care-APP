@@ -23,6 +23,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.lactacare.datos.dto.ReservaPacienteDto
 import com.example.lactacare.vistas.chat.BurbujaChatFlotante
 import com.example.lactacare.vistas.theme.*
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @Composable
 fun PantallaHomePaciente(
@@ -31,6 +35,7 @@ fun PantallaHomePaciente(
     onNavReservas: () -> Unit,
     onNavBebe: () -> Unit,
     onNavInfo: (String) -> Unit,
+    onNavChat: () -> Unit,
     viewModel: PatientHomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -43,7 +48,7 @@ fun PantallaHomePaciente(
         Scaffold(
             floatingActionButton = {
                 FloatingActionButton(
-                    onClick = { mostrarChat = true },
+                    onClick = onNavChat, // Navegar al chat completo
                     containerColor = MomPrimary,
                     contentColor = Color.White,
                     shape = CircleShape
@@ -56,6 +61,7 @@ fun PantallaHomePaciente(
                 modifier = Modifier.padding(padding),
                 proximaCita = uiState.proximaCita,
                 nombreBebe = uiState.nombreBebe,
+                sugerencias = uiState.sugerencias, // Pasamos la lista real
                 onNavReservas = onNavReservas,
                 onNavBebe = onNavBebe,
                 onNavInfo = onNavInfo
@@ -75,10 +81,21 @@ fun DashboardPacienteContent(
     modifier: Modifier = Modifier,
     proximaCita: ReservaPacienteDto?,
     nombreBebe: String?,
+    sugerencias: List<com.example.lactacare.datos.dto.SugerenciaDto> = emptyList(),
     onNavReservas: () -> Unit,
     onNavBebe: () -> Unit,
     onNavInfo: (String) -> Unit
 ) {
+    // Estado para el dialog
+    var tipSeleccionado by remember { mutableStateOf<com.example.lactacare.datos.dto.SugerenciaDto?>(null) }
+
+    if (tipSeleccionado != null) {
+        DialogoDetalleTip(
+            tip = tipSeleccionado!!,
+            onDismiss = { tipSeleccionado = null }
+        )
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -181,39 +198,104 @@ fun DashboardPacienteContent(
             }
         }
 
-        // 3. INFORMATIVO
-        item {
-            Column {
-                Text("Informativo", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = DashboardTextDark, modifier = Modifier.padding(bottom = 12.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val items = listOf(
-                        Triple(Icons.Outlined.HealthAndSafety, "Beneficios", "Descubre ventajas"),
-                        Triple(Icons.Outlined.WaterDrop, "Extracción", "Técnicas y consejos"),
-                        Triple(Icons.Outlined.MenuBook, "Guía 101", "Guía para lactar")
-                    )
-                    items(items) { (icon, title, subtitle) ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(16.dp),
-                            elevation = CardDefaults.cardElevation(1.dp),
-                            modifier = Modifier.width(160.dp).height(170.dp).clickable { onNavInfo(title) }
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxSize().padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+        // 3. INFORMATIVO (REAL TIPS)
+        if (sugerencias.isNotEmpty()) {
+            item {
+                Column {
+                    Text("Tips Informativos", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = DashboardTextDark, modifier = Modifier.padding(bottom = 12.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        items(sugerencias) { tip ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = CardDefaults.cardElevation(1.dp),
+                                modifier = Modifier.width(200.dp).height(180.dp).clickable { 
+                                    tipSeleccionado = tip // Abrir dialog
+                                } 
                             ) {
-                                Icon(icon, null, tint = DashboardPinkIcon, modifier = Modifier.size(48.dp))
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = DashboardTextDark)
-                                Text(subtitle, fontSize = 13.sp, color = DashboardTextLight, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                Column(
+                                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Top 
+                                ) {
+                                    Icon(Icons.Outlined.Lightbulb, null, tint = DashboardPinkIcon, modifier = Modifier.size(32.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(tip.titulo, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = DashboardTextDark, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    // Show preview of detail
+                                    Text(tip.detalle, fontSize = 12.sp, color = DashboardTextLight, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                }
                             }
                         }
                     }
                 }
             }
         }
+
         
         item { Spacer(modifier = Modifier.height(80.dp)) }
+    }
+}
+
+@Composable
+fun DialogoDetalleTip(
+    tip: com.example.lactacare.datos.dto.SugerenciaDto,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Lightbulb, null, tint = DashboardPinkIcon, modifier = Modifier.size(32.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Tip Informativo", fontSize = 14.sp, color = DashboardTextLight, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, null, tint = Color.Gray)
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = tip.titulo,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = DashboardTextDark
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Contenido Scrollable
+                val scrollState = rememberScrollState()
+                Column(modifier = Modifier
+                    .heightIn(max = 300.dp)
+                    .verticalScroll(scrollState)
+                ) {
+                    Text(
+                        text = tip.detalle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.DarkGray,
+                        lineHeight = 22.sp
+                    )
+                    // URL de imagen eliminada por solicitud del usuario
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MomAccent, contentColor = Color(0xFFC13B84))
+                ) {
+                    Text("Entendido")
+                }
+            }
+        }
     }
 }

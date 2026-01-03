@@ -79,6 +79,15 @@ interface ApiService {
     @DELETE("api/refrigeradores/{id}")
     suspend fun eliminarRefrigerador(@Path("id") id: Long): Response<Unit>
 
+    // --- SUGERENCIAS ---
+    @GET("api/sugerencias")
+    suspend fun obtenerSugerencias(): Response<List<com.example.lactacare.datos.dto.SugerenciaDto>>
+
+    @POST("api/sugerencias")
+    suspend fun crearSugerencia(@Body sugerencia: com.example.lactacare.datos.dto.SugerenciaDto): Response<com.example.lactacare.datos.dto.SugerenciaDto>
+
+    @DELETE("api/sugerencias/{id}")
+    suspend fun eliminarSugerencia(@Path("id") id: Int): Response<Unit>
 
     // 7. DOCTOR
     @GET("api/reservas/fecha/{fecha}")

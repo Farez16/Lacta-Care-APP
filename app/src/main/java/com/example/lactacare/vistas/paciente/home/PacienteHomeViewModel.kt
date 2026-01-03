@@ -18,12 +18,14 @@ data class PatientHomeUiState(
     val isLoading: Boolean = false,
     val proximaCita: ReservaPacienteDto? = null,
     val nombreBebe: String? = null,
+    val sugerencias: List<com.example.lactacare.datos.dto.SugerenciaDto> = emptyList(), // Nuevo campo
     val error: String? = null
 )
 
 @HiltViewModel
 class PatientHomeViewModel @Inject constructor(
     private val repository: IPatientRepository,
+    private val sugerenciasRepo: com.example.lactacare.datos.repository.SugerenciasRepository, // Inyectado
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -61,10 +63,18 @@ class PatientHomeViewModel @Inject constructor(
                 }
             }
 
+            // 3. Cargar Sugerencias (Tips) Aleatorias
+            var tips: List<com.example.lactacare.datos.dto.SugerenciaDto> = emptyList()
+            val resultTips = sugerenciasRepo.obtenerSugerencias()
+            if (resultTips.isSuccess) {
+                tips = resultTips.getOrDefault(emptyList()).shuffled() // Aleatorio
+            }
+
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 nombreBebe = bebe,
-                proximaCita = proxima
+                proximaCita = proxima,
+                sugerencias = tips
             )
         }
     }
