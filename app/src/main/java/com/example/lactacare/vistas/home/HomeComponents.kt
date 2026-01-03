@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Construction
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
@@ -23,7 +24,11 @@ import com.example.lactacare.vistas.theme.TextoOscuroClean
 import com.example.lactacare.vistas.navegacion.ItemMenu
 
 @Composable
-fun TopBarHome(saludo: String, colorIcono: Color) {
+fun TopBarHome(
+    saludo: String, 
+    colorIcono: Color,
+    onMenuClick: () -> Unit = {} // Nuevo callback
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -32,9 +37,15 @@ fun TopBarHome(saludo: String, colorIcono: Color) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Botón Hamburguesa (Nuevo)
+            IconButton(onClick = onMenuClick) {
+                Icon(Icons.Default.Menu, contentDescription = "Menú", tint = TextoOscuroClean)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(40.dp) // Ligeramente más pequeño para ajustar espacio
                     .clip(CircleShape)
                     .background(Color.LightGray) // Placeholder foto
             )
