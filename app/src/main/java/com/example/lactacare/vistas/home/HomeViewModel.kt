@@ -15,6 +15,7 @@ import javax.inject.Inject
 // Estado de la UI
 data class HomeUiState(
     val nombreUsuario: String = "Cargando...",
+    val userId: Long? = null,
     val isLoading: Boolean = false,
     // Campo nuevo para guardar las estadísticas del Admin
     val adminStats: DashboardAdminStats? = null
@@ -36,26 +37,25 @@ class HomeViewModel @Inject constructor(
     private fun cargarDatos() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-
-            // 1. Obtenemos nombre y rol de la sesión local
+            // 1. Obtenemos nombre, rol y userId de la sesión local
             val nombre = sessionManager.userName.first() ?: "Usuario"
             val rol = sessionManager.userRole.first() ?: "PACIENTE"
-
+            val userId = sessionManager.userId.first()  // ✅ AGREGAR ESTA LÍNEA
             // 2. Lógica según el Rol
             if (rol == "ADMINISTRADOR") {
                 // Si es Admin, pedimos las estadísticas a la API
                 val stats = adminRepository.obtenerEstadisticas()
-
                 _uiState.value = _uiState.value.copy(
                     nombreUsuario = nombre,
+                    userId = userId,  // ✅ AGREGAR ESTA LÍNEA
                     adminStats = stats,
                     isLoading = false
                 )
             } else {
                 // Si es Paciente o Doctor, por ahora solo mostramos el nombre
-                // (Más adelante aquí cargaremos sus reservas)
                 _uiState.value = _uiState.value.copy(
                     nombreUsuario = nombre,
+                    userId = userId,  // ✅ AGREGAR ESTA LÍNEA
                     isLoading = false
                 )
             }

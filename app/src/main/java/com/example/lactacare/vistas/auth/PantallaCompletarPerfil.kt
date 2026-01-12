@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.lactacare.datos.ValidationUtils
 import com.example.lactacare.datos.dto.AuthState
 import com.example.lactacare.datos.dto.GoogleUserData
 import com.example.lactacare.vistas.theme.SlateGray
@@ -72,6 +73,25 @@ fun PantallaCompletarPerfil(
             }
             // Puedes agregar más casos si el backend retorna errores específicos
             else -> {}
+        }
+    }
+    // Al recibir el nombre de Google
+    LaunchedEffect(googleUserData) {
+        // Opción 1: Si Google ya separó el nombre (givenName y familyName disponibles)
+        if (!googleUserData.givenName.isNullOrBlank() && !googleUserData.familyName.isNullOrBlank()) {
+            primerNombre = googleUserData.givenName ?: ""
+            primerApellido = googleUserData.familyName ?: ""
+            // Dejar segundoNombre y segundoApellido vacíos
+            segundoNombre = ""
+            segundoApellido = ""
+        } else {
+            // Opción 2: Procesar el nombre completo con nuestra lógica
+            val nombresProcessados = ValidationUtils.procesarNombreGoogle(googleUserData.name)
+
+            primerNombre = nombresProcessados.primerNombre
+            segundoNombre = nombresProcessados.segundoNombre
+            primerApellido = nombresProcessados.primerApellido
+            segundoApellido = nombresProcessados.segundoApellido
         }
     }
     Scaffold(

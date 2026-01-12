@@ -1,5 +1,6 @@
 package com.example.lactacare.di
 
+import com.example.lactacare.datos.network.ApiService
 import com.example.lactacare.datos.repository.AlertasRepository
 import com.example.lactacare.datos.repository.AuthRepositoryImpl
 import com.example.lactacare.datos.repository.ChatRepositoryImpl
@@ -16,6 +17,7 @@ import com.example.lactacare.dominio.repository.ILactariosRepository
 import com.example.lactacare.dominio.repository.IPatientRepository
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
@@ -67,4 +69,5 @@ abstract class RepositoryModule {
     abstract fun bindAlertasRepository(
         alertasRepository: AlertasRepository
     ): IAlertasRepository
+
 }

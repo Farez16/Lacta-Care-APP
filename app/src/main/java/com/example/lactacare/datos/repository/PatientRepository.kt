@@ -35,4 +35,17 @@ class PatientRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun cancelarReserva(idReserva: Long): Result<Boolean> {
+        return try {
+            val response = apiService.cancelarReserva(idReserva)
+            if (response.isSuccessful) {
+                Result.success(true)
+            } else {
+                Result.failure(Exception(response.message()))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

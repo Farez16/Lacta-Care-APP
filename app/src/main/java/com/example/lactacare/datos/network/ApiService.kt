@@ -1,6 +1,6 @@
 package com.example.lactacare.datos.network
 
-import com.example.lactacare.datos.dto.PacienteDto
+import com.example.lactacare.datos.dto.BloqueHorarioDto
 import com.example.lactacare.datos.dto.ReservaDto
 import com.example.lactacare.datos.dto.UsuarioResponseDto
 import retrofit2.Response
@@ -44,7 +44,7 @@ interface ApiService {
     ): Response<ContenedorLecheDto>
 
     // 6. SALAS DE LACTANCIA
-    @GET("api/lactarios")
+    @GET("api/lactarios/activos")
     suspend fun obtenerLactarios(): Response<List<com.example.lactacare.datos.dto.SalaLactanciaDto>>
 
     @POST("api/lactarios")
@@ -58,6 +58,12 @@ interface ApiService {
 
     @DELETE("api/lactarios/{id}")
     suspend fun eliminarLactario(@Path("id") id: Long): Response<Unit>
+
+    @GET("api/reservas/disponibilidad/{idSala}/{fecha}")
+    suspend fun obtenerDisponibilidad(
+        @Path("idSala") idSala: Long,
+        @Path("fecha") fecha: String
+    ): Response<List<BloqueHorarioDto>>
 
     // --- ALERTAS ---
     @GET("api/sistema-alertas")
@@ -104,6 +110,9 @@ interface ApiService {
 
     @POST("api/reservas")
     suspend fun crearReserva(@Body request: com.example.lactacare.datos.dto.CrearReservaRequest): Response<Any>
+
+    @PUT("api/reservas/{id}")
+    suspend fun cancelarReserva(@Path("id") id: Long): Response<Unit>
     // CHATBOT
     @POST("api/chat/preguntar")
     @Headers("Accept: text/plain")

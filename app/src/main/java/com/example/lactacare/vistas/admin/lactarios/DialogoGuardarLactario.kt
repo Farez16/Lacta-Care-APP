@@ -91,7 +91,13 @@ fun DialogoGuardarLactario(
                                 nombre = nombre,
                                 direccion = direccion,
                                 telefono = telefono,
-                                correo = correo
+                                correo = correo,
+                                latitud = lactarioEditar?.latitud,           // ✅ AGREGAR
+                                longitud = lactarioEditar?.longitud,         // ✅ AGREGAR
+                                estado = lactarioEditar?.estado,             // ✅ AGREGAR
+                                horaApertura = lactarioEditar?.horaApertura, // ✅ AGREGAR
+                                horaCierre = lactarioEditar?.horaCierre,     // ✅ AGREGAR
+                                nombreInstitucion = lactarioEditar?.nombreInstitucion // ✅ AGREGAR
                             )
                             onGuardar(nuevoLactario)
                         },

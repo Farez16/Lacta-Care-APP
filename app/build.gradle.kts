@@ -7,7 +7,7 @@ plugins {
 
     // --- AGREGADO: Plugins necesarios para Hilt (Inyección de dependencias) ---
     id("kotlin-kapt")
-    id("com.google.dagger.hilt.android") version "2.51.1"// Si te da error de versión, revísalo en tu build.gradle raíz
+    id("com.google.dagger.hilt.android") version "2.55"// Si te da error de versión, revísalo en tu build.gradle raíz
 }
 
 android {
@@ -39,12 +39,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8 // Hilt suele preferir 1.8 o 17, el 11 está bien pero a veces da warnings
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17 // Hilt suele preferir 1.8 o 17, el 11 está bien pero a veces da warnings
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 
     // --- AGREGADO: Necesario para que Kapt funcione bien con Hilt ---
@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.text)
     implementation(libs.androidx.core.i18n)
+    implementation(libs.androidx.remote.creation.core)
+    implementation(libs.places)
 
     val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
     implementation(composeBom) // Corregido: Se implementa la variable
@@ -109,8 +111,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
     // --- AGREGADO: HILT (Inyección de Dependencias - VITAL) ---
-    implementation("com.google.dagger:hilt-android:2.51.1")
-    kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+    implementation("com.google.dagger:hilt-android:2.55")
+    kapt("com.google.dagger:hilt-android-compiler:2.55")
 
     // --- AGREGADO: Hilt para Compose (Para usar hiltViewModel()) ---
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
@@ -120,4 +122,7 @@ dependencies {
      //AGREGADO PLAY SERVICES (UBICACION)
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // Pull to Refresh
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
 }

@@ -75,17 +75,27 @@ class MainActivity : ComponentActivity() {
                         // --- PANTALLA DE LOGIN ---
                         composable(
                             route = "login/{rolTexto}",
-                            arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
+                            arguments = listOf(navArgument("rolTexto") {
+                                type = NavType.StringType
+                            })
                         ) { backStackEntry ->
-                            val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
-                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
+                            val rolTexto =
+                                backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
+                            val rolEnum = try {
+                                RolUsuario.valueOf(rolTexto)
+                            } catch (e: Exception) {
+                                RolUsuario.PACIENTE
+                            }
                             val viewModel: AuthViewModel = hiltViewModel()
                             LaunchedEffect(rolEnum) { viewModel.setRol(rolEnum) }
                             // Google Login Incompleto
                             val incompleteData by viewModel.profileIncompleteData.collectAsState()
                             LaunchedEffect(incompleteData) {
                                 incompleteData?.let { data ->
-                                    navController.currentBackStackEntry?.savedStateHandle?.set("googleData", data.googleUserData)
+                                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                                        "googleData",
+                                        data.googleUserData
+                                    )
                                     navController.navigate("completar_perfil")
                                 }
                             }
@@ -109,6 +119,7 @@ class MainActivity : ComponentActivity() {
                                             popUpTo("login/$rolTexto") { inclusive = false }
                                         }
                                     }
+
                                     else -> {}
                                 }
                             }
@@ -142,7 +153,8 @@ class MainActivity : ComponentActivity() {
                                         // Navegación limpia al Home
                                         navController.navigate("home/PACIENTE") {
                                             popUpTo("bienvenida") { inclusive = true }
-                                            launchSingleTop = true // Evita duplicar la pantalla si se clica rápido
+                                            launchSingleTop =
+                                                true // Evita duplicar la pantalla si se clica rápido
                                         }
                                     },
                                     onCancelar = {
@@ -165,7 +177,9 @@ class MainActivity : ComponentActivity() {
                         // --- PANTALLA DE REGISTRO MANUAL ---
                         composable(
                             route = "registro/{rolTexto}",
-                            arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
+                            arguments = listOf(navArgument("rolTexto") {
+                                type = NavType.StringType
+                            })
                         ) {
                             val viewModel: RegistroPersonaViewModel = hiltViewModel()
                             PantallaRegistroPersona(
@@ -177,10 +191,17 @@ class MainActivity : ComponentActivity() {
                         // Pantalla 1: Solicitar Código
                         composable(
                             route = "recuperar_password/{rolTexto}",
-                            arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
+                            arguments = listOf(navArgument("rolTexto") {
+                                type = NavType.StringType
+                            })
                         ) { backStackEntry ->
-                            val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
-                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
+                            val rolTexto =
+                                backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
+                            val rolEnum = try {
+                                RolUsuario.valueOf(rolTexto)
+                            } catch (e: Exception) {
+                                RolUsuario.PACIENTE
+                            }
                             LaunchedEffect(rolEnum) {
                                 recuperarPasswordViewModel.setRol(rolEnum)
                             }
@@ -203,8 +224,13 @@ class MainActivity : ComponentActivity() {
                             )
                         ) { backStackEntry ->
                             val correo = backStackEntry.arguments?.getString("correo") ?: ""
-                            val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
-                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
+                            val rolTexto =
+                                backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
+                            val rolEnum = try {
+                                RolUsuario.valueOf(rolTexto)
+                            } catch (e: Exception) {
+                                RolUsuario.PACIENTE
+                            }
                             PantallaVerificarCodigo(
                                 correo = correo,
                                 rolUsuario = rolEnum,
@@ -212,7 +238,9 @@ class MainActivity : ComponentActivity() {
                                 onVolver = { navController.popBackStack() },
                                 onCodigoVerificado = {
                                     navController.navigate("nueva_password/$rolTexto") {
-                                        popUpTo("verificar_codigo/$correo/$rolTexto") { inclusive = true }
+                                        popUpTo("verificar_codigo/$correo/$rolTexto") {
+                                            inclusive = true
+                                        }
                                     }
                                 },
                                 onReenviarCodigo = {
@@ -224,10 +252,17 @@ class MainActivity : ComponentActivity() {
                         // Pantalla 3: Nueva Contraseña
                         composable(
                             route = "nueva_password/{rolTexto}",
-                            arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
+                            arguments = listOf(navArgument("rolTexto") {
+                                type = NavType.StringType
+                            })
                         ) { backStackEntry ->
-                            val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
-                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
+                            val rolTexto =
+                                backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
+                            val rolEnum = try {
+                                RolUsuario.valueOf(rolTexto)
+                            } catch (e: Exception) {
+                                RolUsuario.PACIENTE
+                            }
                             PantallaNuevaPassword(
                                 rolUsuario = rolEnum,
                                 viewModel = recuperarPasswordViewModel,
@@ -239,6 +274,7 @@ class MainActivity : ComponentActivity() {
                                         popUpTo("login/$rolTexto") { inclusive = true }
                                     }
                                 }
+
                             )
                         }
                         // --- PANTALLA CAMBIAR CONTRASEÑA TEMPORAL ---
@@ -269,10 +305,17 @@ class MainActivity : ComponentActivity() {
                         // --- PANTALLA HOME (PRINCIPAL) ---
                         composable(
                             route = "home/{rolTexto}",
-                            arguments = listOf(navArgument("rolTexto") { type = NavType.StringType })
+                            arguments = listOf(navArgument("rolTexto") {
+                                type = NavType.StringType
+                            })
                         ) { backStackEntry ->
-                            val rolTexto = backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
-                            val rolEnum = try { RolUsuario.valueOf(rolTexto) } catch (e: Exception) { RolUsuario.PACIENTE }
+                            val rolTexto =
+                                backStackEntry.arguments?.getString("rolTexto") ?: "PACIENTE"
+                            val rolEnum = try {
+                                RolUsuario.valueOf(rolTexto)
+                            } catch (e: Exception) {
+                                RolUsuario.PACIENTE
+                            }
                             PantallaHome(
                                 rolUsuario = rolEnum,
                                 onLogout = {

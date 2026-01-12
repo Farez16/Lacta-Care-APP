@@ -104,12 +104,18 @@ fun ItemSugerencia(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Text(sugerencia.detalle, fontSize = 14.sp, color = Color.DarkGray)
-            
+
+            // --- CORRECCIÓN AQUÍ ---
+            Text(
+                text = sugerencia.detalle ?: "Sin descripción", // El operador Elvis salva el día
+                fontSize = 14.sp,
+                color = Color.DarkGray
+            )
+            // -----------------------
+
             if (!sugerencia.imagenUrl.isNullOrEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text("Adjunto: ${sugerencia.imagenUrl}", fontSize = 12.sp, color = Color.Blue)
-                // Aquí podrías usar Coil para cargar la imagen real si es una URL válida
             }
         }
     }
