@@ -3,6 +3,7 @@ package com.example.lactacare.vistas.admin.sugerencias
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -13,11 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.lactacare.datos.dto.SugerenciaDto
-import com.example.lactacare.vistas.theme.AdminPrimary
+import com.example.lactacare.vistas.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,29 +40,24 @@ fun PantallaSugerencias(
         )
     }
 
-    Scaffold(
-        topBar = {
-             CenterAlignedTopAppBar(
-                 title = { Text("Tips Informativos (CMS)", fontWeight = FontWeight.Bold, color = AdminPrimary) }
-             )
-        },
+    PantallaPremiumAdmin(
+        titulo = "Tips Informativos (CMS)",
         floatingActionButton = {
-            FloatingActionButton(
+            BotonPildora(
+                text = "Crear Tip",
+                icon = Icons.Default.Add,
                 onClick = { mostrarDialogo = true },
-                containerColor = AdminPrimary,
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Crear Tip")
-            }
+                modifier = Modifier.padding(bottom = 16.dp).height(56.dp)
+            )
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = AdminPrimary)
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = NeonPrimary)
             } else if (uiState.error != null) {
                 Text(
                     text = "Error: ${uiState.error}",
-                    color = Color.Red,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else if (uiState.sugerencias.isEmpty()) {
@@ -74,13 +71,14 @@ fun PantallaSugerencias(
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(uiState.sugerencias) { sugerencia ->
                         if (sugerencia.id != null) {
-                            ItemSugerencia(sugerencia, onEliminar = { viewModel.eliminar(sugerencia.id) })
+                            ItemSugerenciaPremium(sugerencia, onEliminar = { viewModel.eliminar(sugerencia.id) })
                         }
                     }
+                    item { Spacer(Modifier.height(80.dp)) }
                 }
             }
         }
@@ -88,34 +86,69 @@ fun PantallaSugerencias(
 }
 
 @Composable
-fun ItemSugerencia(
+fun ItemSugerenciaPremium(
     sugerencia: SugerenciaDto,
     onEliminar: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(sugerencia.titulo, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+    TarjetaPremium {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.Top) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MintPastel,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Feedback, null, tint = NeonPrimary, modifier = Modifier.size(20.dp))
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = sugerencia.titulo,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TextoOscuroClean
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = sugerencia.detalle,
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                
                 IconButton(onClick = onEliminar) {
-                    Icon(Icons.Default.Delete, null, tint = Color.Red)
+                    Icon(Icons.Default.Delete, null, tint = Color(0xFFEF5350))
                 }
             }
-            Spacer(Modifier.height(8.dp))
-
-            // --- CORRECCIÓN AQUÍ ---
-            Text(
-                text = sugerencia.detalle ?: "Sin descripción", // El operador Elvis salva el día
-                fontSize = 14.sp,
-                color = Color.DarkGray
-            )
-            // -----------------------
-
+            
             if (!sugerencia.imagenUrl.isNullOrEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text("Adjunto: ${sugerencia.imagenUrl}", fontSize = 12.sp, color = Color.Blue)
+                Spacer(Modifier.height(12.dp))
+                Surface(
+                    color = BackgroundPastel,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 52.dp) // Indent to align with text
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        // Placeholder icon for image
+                        Icon(Icons.Default.Feedback, null, tint = NeonPrimary, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Imagen adjunta disponible",
+                            fontSize = 12.sp,
+                            color = DarkCharcoal,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }

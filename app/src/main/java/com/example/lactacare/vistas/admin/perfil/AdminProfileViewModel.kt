@@ -14,7 +14,7 @@ import javax.inject.Inject
 data class AdminProfileUiState(
     val isLoading: Boolean = false,
     val nombre: String = "Cargando...",
-    val correo: String = "",
+    val cedula: String = "",
     val rol: String = "",
     val error: String? = null,
     val sessionClosed: Boolean = false
@@ -40,7 +40,6 @@ class AdminProfileViewModel @Inject constructor(
             // 1. Cargar datos locales rápidos (Nombre y Rol)
             val nombreLocal = sessionManager.userName.first() ?: "Usuario"
             val rolLocal = sessionManager.userRole.first() ?: "ADMINISTRADOR"
-            
             _uiState.value = _uiState.value.copy(
                 nombre = nombreLocal,
                 rol = rolLocal
@@ -54,7 +53,8 @@ class AdminProfileViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     nombre = "${profile.primerNombre} ${profile.apellido}",
-                    correo = profile.cedula, // Mostramos Cédula en lugar de correo por ahora
+                    // Mantenemos el correo local ya que el endpoint /me no lo devuelve
+                    cedula = profile.cedula ?: "N/A",
                     rol = profile.rol ?: rolLocal
                 )
             } else {

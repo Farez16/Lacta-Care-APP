@@ -15,12 +15,18 @@ import retrofit2.http.DELETE
 import retrofit2.http.PUT
 import retrofit2.http.PATCH
 import retrofit2.http.Path
+import retrofit2.http.Multipart
+import retrofit2.http.Part
+import okhttp3.MultipartBody
 
 interface ApiService {
 
     // 1. Obtener Doctores (URL confirmada en tu AdminEmployeeController)
     @GET("api/admin/empleados/listar-doctores")
     suspend fun obtenerDoctores(): Response<List<UsuarioResponseDto>>
+
+    @GET("api/admin/empleados/listar-administradores")
+    suspend fun obtenerAdministradores(): Response<List<UsuarioResponseDto>>
 
     // 2. Obtener Pacientes (Optimizado)
     @GET("api/pacientes/listar-dto")
@@ -32,11 +38,35 @@ interface ApiService {
 
     // 4. Crear Empleado (Doctor/Admin)
     @POST("api/admin/empleados/crear")
-    suspend fun crearEmpleado(@Body request: com.example.lactacare.datos.dto.CrearEmpleadoRequest): Response<Void>
+    suspend fun crearEmpleado(@Body request: com.example.lactacare.datos.dto.CrearEmpleadoRequest): Response<com.example.lactacare.datos.dto.UsuarioResponseDto>
+
+    @PUT("api/empleados/{id}")
+    suspend fun actualizarEmpleado(
+        @Path("id") id: Int, 
+        @Body request: com.example.lactacare.datos.dto.PersonaEmpleadoUpdateDTO
+    ): Response<com.example.lactacare.datos.dto.UsuarioResponseDto>
+
+    @DELETE("api/empleados/{id}")
+    suspend fun eliminarEmpleado(@Path("id") id: Int): Response<Unit>
+
+    // --- HORARIOS EMPLEADO ---
+    @POST("api/horarios-empleado")
+    suspend fun crearHorarioEmpleado(@Body horario: com.example.lactacare.datos.dto.HorariosEmpleadoDto): Response<com.example.lactacare.datos.dto.HorariosEmpleadoDto>
+
+    // --- DIAS LABORABLES ---
+    @POST("api/dias-laborables") // Asumiendo endpoint estÃ¡ndar, verificar Controller si es necesario
+    suspend fun crearDiasLaborables(@Body dias: com.example.lactacare.datos.dto.DiasLaborablesEmpleadoDto): Response<com.example.lactacare.datos.dto.DiasLaborablesEmpleadoDto>
+
+    // --- ROLES ---
+    @GET("api/roles")
+    suspend fun obtenerRoles(): Response<List<com.example.lactacare.datos.dto.RolDto>>
 
     // 5. INVENTARIO (CONTENEDORES LECHE)
     @GET("api/contenedores-leche")
     suspend fun obtenerContenedoresLeche(): Response<List<ContenedorLecheDto>>
+
+    @POST("api/contenedores-leche")
+    suspend fun crearContenedorLeche(@Body request: com.example.lactacare.datos.dto.CrearContenedorRequest): Response<ContenedorLecheDto>
 
     @PUT("api/contenedores-leche/{id}")
     suspend fun actualizarContenedorLeche(
@@ -50,6 +80,9 @@ interface ApiService {
 
     @POST("api/lactarios")
     suspend fun crearLactario(@Body lactario: com.example.lactacare.datos.dto.SalaLactanciaDto): Response<com.example.lactacare.datos.dto.SalaLactanciaDto>
+
+    @POST("api/lactarios/con-cubiculos")
+    suspend fun crearLactarioConCubiculos(@Body dto: com.example.lactacare.datos.dto.SalaLactanciaConCubiculosDTO): Response<Any>
 
     @PUT("api/lactarios/{id}")
     suspend fun editarLactario(
@@ -105,6 +138,12 @@ interface ApiService {
     @POST("api/atenciones")
     suspend fun crearAtencion(@Body request: com.example.lactacare.datos.dto.CrearAtencionRequest): Response<Any>
 
+    @PUT("api/reservas/{id}")
+    suspend fun actualizarReserva(
+        @Path("id") id: Long,
+        @Body reserva: com.example.lactacare.datos.dto.DoctorReservaDto
+    ): Response<Map<String, Any>>
+
     // 8. PACIENTE
     @GET("api/reservas/paciente/{id}")
     suspend fun obtenerReservasPaciente(@Path("id") id: Long): Response<List<com.example.lactacare.datos.dto.ReservaPacienteDto>>
@@ -152,4 +191,35 @@ interface ApiService {
         @Body request: com.example.lactacare.datos.dto.ActualizarPerfilRequest
     ): Response<Unit>
 
+    // ==================== INSTITUCIONES ====================
+    
+    @GET("api/instituciones")
+    suspend fun obtenerInstituciones(): Response<List<com.example.lactacare.dominio.model.Institucion>>
+
+    @GET("api/instituciones/{id}")
+    suspend fun obtenerInstitucion(@Path("id") id: Long): Response<com.example.lactacare.dominio.model.Institucion>
+
+    @POST("api/instituciones")
+    suspend fun crearInstitucion(@Body institucion: com.example.lactacare.dominio.model.Institucion): Response<com.example.lactacare.dominio.model.Institucion>
+
+    @PUT("api/instituciones/{id}")
+    suspend fun editarInstitucion(
+        @Path("id") id: Long,
+        @Body institucion: com.example.lactacare.dominio.model.Institucion
+    ): Response<com.example.lactacare.dominio.model.Institucion>
+
+    @DELETE("api/instituciones/{id}")
+    suspend fun eliminarInstitucion(@Path("id") id: Long): Response<Unit>
+
+    // ==================== IA - DOCUMENTOS (Chatbot) ====================
+    
+    @retrofit2.http.Multipart
+    @POST("api/documentos/upload")
+    suspend fun subirDocumento(@retrofit2.http.Part archivo: MultipartBody.Part): Response<Map<String, Any>>
+
+    @GET("api/documentos")
+    suspend fun listarDocumentos(): Response<List<com.example.lactacare.datos.dto.DocumentoDto>>
+
+    @DELETE("api/documentos/{id}")
+    suspend fun eliminarDocumento(@Path("id") id: Long): Response<Map<String, Any>>
 }

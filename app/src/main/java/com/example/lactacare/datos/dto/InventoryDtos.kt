@@ -7,5 +7,20 @@ data class ContenedorLecheDto(
     @SerializedName("fechaHoraExtraccion") val fechaHoraExtraccion: String?, // Probable formato ISO
     @SerializedName("fechaHoraCaducidad") val fechaHoraCaducidad: String?,
     @SerializedName("estado") val estado: String?, // Ej: "Disponible", "Caducado"
-    @SerializedName("cantidadMililitros") val cantidadMililitros: Double?
+    @SerializedName("cantidadMililitros") val cantidadMililitros: Double?,
+    // Hypothetical fields based on UbicacionContenedor logic
+    @SerializedName("refrigeradorId") val refrigeradorId: Long? = null,
+    @SerializedName("piso") val piso: Int? = null,
+    @SerializedName("fila") val fila: Int? = null,
+    @SerializedName("columna") val columna: Int? = null
+)
+
+data class CrearContenedorRequest(
+    val fechaHoraExtraccion: String,
+    val cantidadMililitros: Double,
+    val refrigeradorId: Long,
+    val piso: Int,
+    val fila: Int,
+    val columna: Int,
+    val atencionId: Long // Vinculo con la atencion/paciente
 )

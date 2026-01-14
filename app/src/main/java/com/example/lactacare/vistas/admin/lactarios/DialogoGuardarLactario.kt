@@ -1,7 +1,11 @@
 package com.example.lactacare.vistas.admin.lactarios
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -9,81 +13,204 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.example.lactacare.datos.dto.DiasLaborablesSalaDto
+import com.example.lactacare.datos.dto.HorariosSalaDto
 import com.example.lactacare.datos.dto.SalaLactanciaDto
+import com.example.lactacare.dominio.model.Institucion
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DialogoGuardarLactario(
     lactarioEditar: SalaLactanciaDto? = null,
+    instituciones: List<Institucion>,
     onDismiss: () -> Unit,
-    onGuardar: (SalaLactanciaDto) -> Unit
+    onGuardar: (SalaLactanciaDto, Int) -> Unit
 ) {
+    // Campos Básicos
     var nombre by remember { mutableStateOf(lactarioEditar?.nombre ?: "") }
     var direccion by remember { mutableStateOf(lactarioEditar?.direccion ?: "") }
     var telefono by remember { mutableStateOf(lactarioEditar?.telefono ?: "") }
     var correo by remember { mutableStateOf(lactarioEditar?.correo ?: "") }
+    var numCubiculos by remember { mutableStateOf(lactarioEditar?.numeroCubiculos?.toString() ?: "1") }
+    
+    // Institución
+    var institucionExpanded by remember { mutableStateOf(false) }
+    var institucionSeleccionada by remember { mutableStateOf(lactarioEditar?.institucion) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    // Ubicación (Default: Centro de la ciudad o 0,0)
+    val defaultLocation = LatLng(-0.180653, -78.467834) // Quito Example
+    var markerPosition by remember { 
+        mutableStateOf(
+            if (lactarioEditar?.latitud != null && lactarioEditar.longitud != null)
+                LatLng(lactarioEditar.latitud.toDouble(), lactarioEditar.longitud.toDouble())
+            else defaultLocation
+        )
+    }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(markerPosition, 15f)
+    }
+
+    // Horarios
+    var horaInicio by remember { mutableStateOf(lactarioEditar?.horario?.horaInicio ?: "08:00") }
+    var horaFin by remember { mutableStateOf(lactarioEditar?.horario?.horaFin ?: "17:00") }
+    
+    // Días
+    var dias by remember { mutableStateOf(lactarioEditar?.dias ?: DiasLaborablesSalaDto(lunes = true, martes = true, miercoles = true, jueves = true, viernes = true)) }
+    
+    // Estado
+    var esActivo by remember { mutableStateOf(lactarioEditar?.estado == "Activo" || lactarioEditar?.estado == null) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false) // Full width allowed
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.padding(16.dp)
             ) {
                 Text(
                     text = if (lactarioEditar == null) "Nuevo Lactario" else "Editar Lactario",
-                    style = MaterialTheme.typography.headlineSmall
+                    style = MaterialTheme.typography.headlineMedium
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                
+                Divider(Modifier.padding(vertical = 8.dp))
 
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre del Centro Médico") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    // 1. Institución (Dropdown)
+                    ExposedDropdownMenuBox(
+                        expanded = institucionExpanded,
+                        onExpandedChange = { institucionExpanded = !institucionExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = institucionSeleccionada?.nombreInstitucion ?: "Seleccione Institución",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = institucionExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            label = { Text("Institución") }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = institucionExpanded,
+                            onDismissRequest = { institucionExpanded = false }
+                        ) {
+                            instituciones.forEach { inst ->
+                                DropdownMenuItem(
+                                    text = { Text(inst.nombreInstitucion) },
+                                    onClick = {
+                                        institucionSeleccionada = inst
+                                        institucionExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = direccion,
-                    onValueChange = { direccion = it },
-                    label = { Text("Dirección") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre Sala") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth())
+                    
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = telefono, 
+                            onValueChange = { telefono = it }, 
+                            label = { Text("Teléfono") }, 
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                        )
+                        OutlinedTextField(
+                            value = numCubiculos, 
+                            onValueChange = { numCubiculos = it }, 
+                            label = { Text("Cubículos") }, 
+                            modifier = Modifier.weight(0.5f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
+                    OutlinedTextField(
+                        value = correo, 
+                        onValueChange = { correo = it }, 
+                        label = { Text("Correo") }, 
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                    )
+                    
+                    Spacer(Modifier.height(8.dp))
+                    // Switch Estado
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Estado: ${if (esActivo) "Activo" else "Inactivo"}", style = MaterialTheme.typography.bodyMedium)
+                        Switch(checked = esActivo, onCheckedChange = { esActivo = it })
+                    }
 
-                OutlinedTextField(
-                    value = telefono,
-                    onValueChange = { telefono = it },
-                    label = { Text("Teléfono") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(16.dp))
+                    Text("Horario de Atención", style = MaterialTheme.typography.titleSmall)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = horaInicio, onValueChange = { horaInicio = it }, label = { Text("Apertura (HH:mm)") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = horaFin, onValueChange = { horaFin = it }, label = { Text("Cierre (HH:mm)") }, modifier = Modifier.weight(1f))
+                    }
 
-                OutlinedTextField(
-                    value = correo,
-                    onValueChange = { correo = it },
-                    label = { Text("Correo Electrónico") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(Modifier.height(16.dp))
+                    Text("Días Laborables", style = MaterialTheme.typography.titleSmall)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                         // Simple checkboxes layout (could be improved)
+                         Column {
+                             CheckboxWithLabel("Lun", dias.lunes) { dias = dias.copy(lunes = it) }
+                             CheckboxWithLabel("Mar", dias.martes) { dias = dias.copy(martes = it) }
+                         }
+                         Column {
+                             CheckboxWithLabel("Mié", dias.miercoles) { dias = dias.copy(miercoles = it) }
+                             CheckboxWithLabel("Jue", dias.jueves) { dias = dias.copy(jueves = it) }
+                         }
+                         Column {
+                             CheckboxWithLabel("Vie", dias.viernes) { dias = dias.copy(viernes = it) }
+                             CheckboxWithLabel("Sáb", dias.sabado) { dias = dias.copy(sabado = it) }
+                         }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+                    Text("Ubicación (Toque para seleccionar)", style = MaterialTheme.typography.titleSmall)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp)
+                            .padding(top = 8.dp)
+                    ) {
+                        GoogleMap(
+                            cameraPositionState = cameraPositionState,
+                            onMapClick = { latLng ->
+                                markerPosition = latLng
+                            }
+                        ) {
+                            Marker(
+                                state = MarkerState(position = markerPosition),
+                                title = "Ubicación Sala"
+                            )
+                        }
+                    }
+                }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancelar")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = onDismiss) { Text("Cancelar") }
                     Button(
                         onClick = {
                             val nuevoLactario = SalaLactanciaDto(
@@ -92,21 +219,29 @@ fun DialogoGuardarLactario(
                                 direccion = direccion,
                                 telefono = telefono,
                                 correo = correo,
-                                latitud = lactarioEditar?.latitud,           // ✅ AGREGAR
-                                longitud = lactarioEditar?.longitud,         // ✅ AGREGAR
-                                estado = lactarioEditar?.estado,             // ✅ AGREGAR
-                                horaApertura = lactarioEditar?.horaApertura, // ✅ AGREGAR
-                                horaCierre = lactarioEditar?.horaCierre,     // ✅ AGREGAR
-                                nombreInstitucion = lactarioEditar?.nombreInstitucion // ✅ AGREGAR
+                                latitud = markerPosition.latitude.toString(),
+                                longitud = markerPosition.longitude.toString(),
+                                institucion = institucionSeleccionada,
+                                horario = HorariosSalaDto(horaInicio =horaInicio, horaFin = horaFin),
+                                dias = dias,
+                                estado = if (esActivo) "Activo" else "Inactivo"
                             )
-                            onGuardar(nuevoLactario)
+                            onGuardar(nuevoLactario, numCubiculos.toIntOrNull() ?: 1)
                         },
-                        enabled = nombre.isNotBlank() && direccion.isNotBlank()
+                        enabled = nombre.isNotBlank() && institucionSeleccionada != null
                     ) {
                         Text(if (lactarioEditar == null) "Guardar" else "Actualizar")
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun CheckboxWithLabel(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(text = label, style = MaterialTheme.typography.bodySmall)
     }
 }

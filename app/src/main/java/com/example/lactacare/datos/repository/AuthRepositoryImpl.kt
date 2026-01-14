@@ -49,10 +49,12 @@ class AuthRepositoryImpl @Inject constructor(
                     val id = (userData["id"] as? Double)?.toLong() ?: 0L
                     val name = userData["nombre_completo"] as? String ?: ""
                     val roleStr = userData["rol"] as? String ?: ""
+                    val email = userData["correo"] as? String ?: "" // <--- EXTRACT EMAIL
                     sessionManager.saveAuthData(
                         token = token,
                         id = id,
                         name = name,
+                        email = email,
                         role = roleStr,
                         completed = true
                     )
@@ -431,6 +433,18 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     // ========================================================================
+    // DOCTOR / EMPLEADO HELPERS
+    // ========================================================================
+    override suspend fun getEmpleadoData(correo: String): Result<com.example.lactacare.datos.dto.PersonaEmpleadoResponseDto> {
+        return try {
+            val response = api.getEmpleadoPorCorreo(correo)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ========================================================================
     // HELPERS PRIVADOS (MEJORADOS)
     // ========================================================================
     private suspend fun guardarSesionLocalmente(authResponse: AuthResponseDto) {
@@ -440,6 +454,7 @@ class AuthRepositoryImpl @Inject constructor(
             token = token,
             id = info.id,
             name = info.fullName,
+            email = info.email, // <--- PASS EMAIL
             role = info.role,
             completed = info.profileCompleted
         )

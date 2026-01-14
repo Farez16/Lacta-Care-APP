@@ -9,7 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.PendingActions
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,12 +53,30 @@ fun PantallaHomeDoctor(
                  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = colorPrimary)
                 }
+            } else if (uiState.error != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Outlined.Groups, contentDescription = null, tint = Color.Red, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = uiState.error!!,
+                            color = Color.Red,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        Button(onClick = { viewModel.verificarSalaYCargarAgenda() }) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
             } else {
                  DashboardDoctorContent(
                     uiState = uiState,
                     colorPrimary = colorPrimary,
                     colorAccent = colorAccent,
-                    onAtender = onAtender
+                    onAtender = onAtender,
+                    onConfirmar = { reserva -> viewModel.confirmarAsistencia(reserva) }
                 )
             }
         }
@@ -68,7 +88,8 @@ fun DashboardDoctorContent(
     uiState: DoctorHomeUiState,
     colorPrimary: Color,
     colorAccent: Color,
-    onAtender: (Long, String) -> Unit
+    onAtender: (Long, String) -> Unit,
+    onConfirmar: (DoctorReservaDto) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -97,7 +118,7 @@ fun DashboardDoctorContent(
         }
 
         items(uiState.agenda) { reserva ->
-            ItemReservaDoctor(reserva, colorPrimary, colorAccent, onAtender)
+            ItemReservaDoctor(reserva, colorPrimary, colorAccent, onAtender, onConfirmar)
         }
     }
 }
@@ -107,7 +128,8 @@ fun ItemReservaDoctor(
     reserva: DoctorReservaDto,  
     colorPrimary: Color, 
     colorAccent: Color,
-    onAtender: (Long, String) -> Unit
+    onAtender: (Long, String) -> Unit,
+    onConfirmar: (DoctorReservaDto) -> Unit
 ) {
     val nombrePaciente = reserva.paciente?.nombreCompleto() ?: "Paciente Desconocido"
     val inicial = nombrePaciente.firstOrNull()?.toString() ?: "?"
@@ -146,6 +168,23 @@ fun ItemReservaDoctor(
             ) {
                 Text(reserva.horaInicio, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colorPrimary)
             }
+            // Check de Asistencia
+             if (esPendiente) {
+                 IconButton(onClick = { onConfirmar(reserva) }) {
+                     Icon(
+                         Icons.Default.CheckCircle, 
+                         contentDescription = "Confirmar Asistencia",
+                         tint = Color.Gray
+                     )
+                 }
+             } else if (reserva.estado == "CONFIRMADA" || reserva.estado == "ASISTIO") {
+                 Icon(
+                     Icons.Default.CheckCircle,
+                     contentDescription = "Asistió",
+                     tint = Color.Green,
+                     modifier = Modifier.padding(start = 8.dp)
+                 )
+             }
         }
     }
 }

@@ -15,10 +15,15 @@ val DoctorPrimary = Color(0xFF42A5F5)    // Azul Botón
 val DoctorText = Color(0xFF0D47A1)       // Azul Texto Fuerte
 val DoctorBackground = Color(0xFFE3F2FD) // Azul Fondo Suave
 
-// ADMINISTRADOR - Verde Gestión
-val AdminPrimary = Color(0xFF66BB6A)     // Verde Botón
-val AdminText = Color(0xFF1B5E20)        // Verde Texto Fuerte
-val AdminBackground = Color(0xFFE8F5E9)  // Verde Fondo Suave
+// ADMINISTRADOR - Verde Gestión (UPDATED TO NEON DESIGN)
+val NeonPrimary = Color(0xFFAEF353)      // Verde Lima Neón High Voltage
+val NeonSecondary = NeonPrimary.copy(alpha = 0.15f) // Fondo sutil
+val DarkCharcoal = Color(0xFF222222)     // Negro Carbón
+val CleanBackground = Color(0xFFF8F9FA)  // Gris hueso casi blanco
+
+val AdminPrimary = NeonPrimary
+val AdminText = DarkCharcoal
+val AdminBackground = NeonSecondary
 
 // --- 2. NEUTROS Y ESTILO "CLEAN" ---
 val TextoOscuroClean = Color(0xFF546E7A)
@@ -31,10 +36,11 @@ val SlateGray = TextoOscuroClean
 val LightGray = BordeGrisClean
 val OffWhite = FondoBlancoClean
 val White = Color.White
+val TextSecondary = TextoOscuroClean // Alias for Admin Secondary Text
 
 // --- 4. COLORES ESPECÍFICOS (LACTARIOS, ESTADO E INVENTARIO) ---
-val MintPrimary = Color(0xFF20DFBF)
-val LactarioBg = Color(0xFFF6F8F8)
+val MintPrimary = NeonPrimary // Alias to Neon for legacy admin screens
+val LactarioBg = CleanBackground
 val StatusGreen = Color(0xFF22C55E)
 val StatusRed = Color(0xFFEF4444)
 val StatusYellow = Color(0xFFEAB308)

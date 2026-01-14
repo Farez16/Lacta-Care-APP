@@ -23,11 +23,13 @@ import com.example.lactacare.vistas.theme.*
 import com.example.lactacare.vistas.admin.lactarios.PantallaLactarios
 import com.example.lactacare.vistas.admin.perfil.PantallaPerfilAdmin
 import com.example.lactacare.vistas.admin.usuarios.PantallaGestionUsuarios
+
 import com.example.lactacare.vistas.admin.refrigeradores.PantallaRefrigeradores // Usamos Refrigeradores (más específico que Inventario)
 import com.example.lactacare.vistas.admin.ia.PantallaGestionIA
 import com.example.lactacare.vistas.admin.alertas.PantallaAlertas
 import com.example.lactacare.vistas.admin.sugerencias.PantallaSugerencias
 import com.example.lactacare.vistas.admin.imagenes.PantallaImagenes
+import com.example.lactacare.vistas.admin.instituciones.PantallaInstituciones
 // Imports de Vistas Paciente/Bebe/Chat/Doctor
 import com.example.lactacare.vistas.bebe.PantallaAnadirBebe
 import com.example.lactacare.vistas.chat.PantallaChat
@@ -48,7 +50,8 @@ fun PantallaHome(
     onNavReservas: () -> Unit = { /* Default empty handled in NavGraph */ },
     onNavBebe: () -> Unit = {},
     onNavInfo: () -> Unit = {},
-    onNavGestion: () -> Unit = {}, // Se mantiene por compatibilidad, pero usaremos navegación interna preferentemente
+    onNavReportes: () -> Unit = {}, // Nuevo callback
+    onNavGestion: () -> Unit = {},
     onNavAtencion: (Long, String) -> Unit = { _, _ -> },
     onNavMisReservas: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
@@ -97,7 +100,8 @@ fun PantallaHome(
                 val drawerItems = listOf(
                     Triple(ItemMenu.AdminIA, "IA", ItemMenu.AdminIA.ruta),
                     Triple(ItemMenu.AdminSugerencias, "Sugerencias", ItemMenu.AdminSugerencias.ruta),
-                    Triple(ItemMenu.AdminImagenes, "Imágenes", ItemMenu.AdminImagenes.ruta)
+                    Triple(ItemMenu.AdminImagenes, "Imágenes", ItemMenu.AdminImagenes.ruta),
+                    Triple(ItemMenu.AdminReporte, "Generar Reporte", "action_report")
                 )
 
                 drawerItems.forEach { (item, label, ruta) ->
@@ -106,7 +110,11 @@ fun PantallaHome(
                         selected = currentRoute == ruta,
                         onClick = {
                             scope.launch { drawerState.close() }
-                            navController.navigate(ruta) { launchSingleTop = true }
+                            if (ruta == "action_report") {
+                                onNavReportes() // USAR CALLBACK DE NAVEGACION
+                            } else {
+                                navController.navigate(ruta) { launchSingleTop = true }
+                            }
                         },
                         icon = { Icon(item.icono, null) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -124,7 +132,6 @@ fun PantallaHome(
                     colorActivo = colorPrincipal,
                     onItemClick = { item ->
                         navController.navigate(item.ruta) {
-                            // Lógica de limpieza de stack al ir al Home
                             if (item.ruta == itemsMenu.first().ruta) {
                                 popUpTo(0) { saveState = false }
                             } else {
@@ -255,8 +262,15 @@ fun PantallaHome(
                                 )
                             }
                             else -> {
-                                // Vista Administrador
                                 Column {
+                                    val context = androidx.compose.ui.platform.LocalContext.current
+                                    LaunchedEffect(uiState.mensaje) {
+                                        uiState.mensaje?.let {
+                                            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+                                            viewModel.limpiarMensaje()
+                                        }
+                                    }
+
                                     TopBarHome(
                                         saludo = uiState.nombreUsuario,
                                         colorIcono = colorPrincipal,
@@ -272,13 +286,9 @@ fun PantallaHome(
                                             colorPrincipal = colorPrincipal,
                                             colorAcento = Color(0xFFE1F5FE),
                                             stats = uiState.adminStats,
-                                            onNavGestion = {
-                                                // Navegación interna a la pantalla de gestión
-                                                navController.navigate(ItemMenu.AdminGestionUsuarios.ruta)
-                                            },
-                                            onNavAlertas = {
-                                                navController.navigate(ItemMenu.AdminAlertas.ruta)
-                                            }
+                                            onNavGestion = { navController.navigate(ItemMenu.AdminGestionUsuarios.ruta) },
+                                            onNavAlertas = { navController.navigate(ItemMenu.AdminAlertas.ruta) },
+                                            onNavReportes = onNavReportes // PASAMOS EL CALLBACK
                                         )
                                     }
                                 }
@@ -286,12 +296,28 @@ fun PantallaHome(
                         }
                     }
 
-                    // --- Pantallas Principales Admin ---
+                    // --- Pantallas Principales Admin/Doctor ---
                     composable(ItemMenu.AdminRefrigeradores.ruta) {
-                        PantallaRefrigeradores() // Reemplaza a Inventario
+                        // Medico solo ve, Admin edita
+                        val esEditable = rolUsuario == RolUsuario.ADMINISTRADOR
+                        PantallaRefrigeradores(
+                            esEditable = esEditable,
+                            primaryColor = if (esEditable) NeonPrimary else DoctorPrimary
+                        ) 
                     }
                     composable(ItemMenu.AdminLactarios.ruta) {
-                        PantallaLactarios()
+                        val esEditable = rolUsuario == RolUsuario.ADMINISTRADOR
+                        PantallaLactarios(
+                            esEditable = esEditable,
+                            primaryColor = if (esEditable) NeonPrimary else DoctorPrimary
+                        )
+                    }
+                    composable(ItemMenu.AdminInstituciones.ruta) {
+                        val esEditable = rolUsuario == RolUsuario.ADMINISTRADOR
+                        PantallaInstituciones(
+                            esEditable = esEditable,
+                            primaryColor = if (esEditable) NeonPrimary else DoctorPrimary
+                        ) 
                     }
                     composable(ItemMenu.AdminPerfil.ruta) {
                         when (rolUsuario) {
@@ -309,7 +335,13 @@ fun PantallaHome(
                     composable(ItemMenu.AdminGestionUsuarios.ruta) {
                         PantallaGestionUsuarios(
                             onVolver = { navController.popBackStack() },
-                            onCrearDoctor = { /* TODO: Navegar a crear doctor si es necesario */ }
+                            onCrearDoctor = { navController.navigate("admin_crear_doctor") }
+                        )
+                    }
+                    
+                    composable("admin_crear_doctor") {
+                        com.example.lactacare.vistas.admin.usuarios.PantallaCrearEmpleado(
+                            onVolver = { navController.popBackStack() }
                         )
                     }
                 }

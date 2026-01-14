@@ -70,8 +70,8 @@ class AgendarViewModel @Inject constructor(
             if (result.isSuccess) {
                 val dtos = result.getOrDefault(emptyList())
                 val domainList = dtos.map { dto ->
-                    Lactario(
-                        id = dto.id.toInt(),
+                     Lactario(
+                        id = dto.id?.toInt() ?: 0,
                         nombre = dto.nombre ?: "Sala Lactancia",
                         direccion = dto.direccion ?: "Sin dirección",
                         correo = dto.correo ?: "",

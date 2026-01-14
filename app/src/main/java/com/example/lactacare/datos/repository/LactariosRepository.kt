@@ -36,6 +36,19 @@ class LactariosRepository @Inject constructor(
         }
     }
 
+    override suspend fun crearSalaConCubiculos(dto: com.example.lactacare.datos.dto.SalaLactanciaConCubiculosDTO): Result<Any> {
+        return try {
+            val response = apiService.crearLactarioConCubiculos(dto)
+            if (response.isSuccessful) {
+                Result.success(response.body() ?: true)
+            } else {
+                Result.failure(Exception("Error al crear con cubículos: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun editarSala(id: Long, sala: SalaLactanciaDto): Result<SalaLactanciaDto> {
         return try {
             val response = apiService.editarLactario(id, sala)

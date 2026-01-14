@@ -22,6 +22,7 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Query
+import retrofit2.http.Path
 
 interface AuthApiService {
 
@@ -107,4 +108,6 @@ interface AuthApiService {
     @POST("api/auth/empleado/change-temporary-password")
     suspend fun changeTemporaryPassword(
         @Header("Authorization") token: String, @Body request: ChangeTemporaryPasswordRequest): Response<ApiResponse>
+    @GET("api/empleados/correo/{correo}")
+    suspend fun getEmpleadoPorCorreo(@Path("correo") correo: String): com.example.lactacare.datos.dto.PersonaEmpleadoResponseDto
 }

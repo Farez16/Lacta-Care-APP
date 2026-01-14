@@ -28,6 +28,6 @@ data class ReservaDto(
     @SerializedName("estado") val estado: String?, // "ACTIVA", "CANCELADA"
     @SerializedName("fecha") val fecha: String?,   // "2025-12-22"
     @SerializedName("horaInicio") val horaInicio: String?,
-    @SerializedName("nombreSala") val nombreSala: String?,
-    @SerializedName("nombrePaciente") val nombrePaciente: String?
+    @SerializedName("salaLactancia") val salaLactancia: SalaLactanciaDto?,
+    @SerializedName("personaPaciente") val personaPaciente: PacienteDto?
 )

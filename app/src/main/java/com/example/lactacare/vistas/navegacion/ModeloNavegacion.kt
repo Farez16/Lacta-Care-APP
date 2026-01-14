@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Kitchen // Refrigeradores
 import androidx.compose.material.icons.filled.Feedback // Sugerencias
 import androidx.compose.material.icons.filled.Image // Imagenes
+import androidx.compose.material.icons.filled.Apartment // Instituciones
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -37,12 +38,14 @@ sealed class ItemMenu(
 
     // Ruta Gestión Usuarios (No en menú inferior, acceso desde Dashboard)
     object AdminGestionUsuarios : ItemMenu("admin_gestion_usuarios", "Usuarios", Icons.Default.ManageAccounts)
-    
+
     // Ruta Menu Lateral
     object AdminIA : ItemMenu("admin_ia", "IA", Icons.Default.Description)
-    object AdminAlertas : ItemMenu("admin_alertas", "Alertas", Icons.Default.Warning)
+    object AdminAlertas : ItemMenu("admin_alerta", "Alertas", Icons.Default.Warning)
     object AdminSugerencias : ItemMenu("admin_sugerencias", "Sugerencias", Icons.Default.Feedback)
     object AdminImagenes : ItemMenu("admin_imagenes", "Imágenes", Icons.Default.Image)
+    object AdminInstituciones : ItemMenu("admin_instituciones", "Instituciones", Icons.Default.Apartment)
+    object AdminReporte : ItemMenu("admin_reporte", "Generar Reporte", Icons.Default.Description)
 }
 
 // Listas estáticas para generar el menú
@@ -57,5 +60,6 @@ val menuAdmin = listOf(
     ItemMenu.AdminDashboard,
     ItemMenu.AdminLactarios,
     ItemMenu.AdminRefrigeradores,
+    ItemMenu.AdminInstituciones,
     ItemMenu.AdminPerfil
 )
