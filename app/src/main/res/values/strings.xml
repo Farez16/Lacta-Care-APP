@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Lacta Care</string>
     <string name="web_client_id">24159690098-96ffdvt7gst12i364s61e4eb1lgegjpj.apps.googleusercontent.com</string>
-    <string name="backend_url">http://192.168.1.6:8080/</string>
+    <string name="backend_url">http://192.168.56.47:8080/</string>
     <!--  Mensajes de error  -->
     <string name="error_network">Error de conexión. Verifica tu internet.</string>
     <string name="error_server">Error del servidor. Intenta más tarde.</string>
