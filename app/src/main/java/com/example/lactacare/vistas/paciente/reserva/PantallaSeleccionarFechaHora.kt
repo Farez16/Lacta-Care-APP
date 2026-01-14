@@ -33,6 +33,8 @@ import java.util.Locale
 fun PantallaSeleccionarFechaHora(
     lactarioId: Long,
     nombreSala: String,
+    cubiculoId: Long,
+    nombreCubiculo: String,
     onNavigateBack: () -> Unit,
     onReservaConfirmada: () -> Unit,
     viewModel: SeleccionarFechaHoraViewModel = hiltViewModel()
@@ -40,9 +42,9 @@ fun PantallaSeleccionarFechaHora(
     val uiState by viewModel.uiState.collectAsState()
     val datePickerState = rememberDatePickerState()
     var showDatePicker by remember { mutableStateOf(false) }
-    // Inicializar ViewModel
+    // Inicializar ViewModel con cubículo
     LaunchedEffect(Unit) {
-        viewModel.inicializar(lactarioId, nombreSala)
+        viewModel.inicializar(lactarioId, nombreSala, cubiculoId)
     }
     // Manejar reserva exitosa
     if (uiState.reservaCreada) {

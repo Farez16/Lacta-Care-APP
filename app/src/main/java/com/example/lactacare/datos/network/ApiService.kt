@@ -13,6 +13,7 @@ import com.example.lactacare.datos.dto.PreguntaRequest
 import retrofit2.http.Headers
 import retrofit2.http.DELETE
 import retrofit2.http.PUT
+import retrofit2.http.PATCH
 import retrofit2.http.Path
 
 interface ApiService {
@@ -111,11 +112,44 @@ interface ApiService {
     @POST("api/reservas")
     suspend fun crearReserva(@Body request: com.example.lactacare.datos.dto.CrearReservaRequest): Response<Any>
 
-    @PUT("api/reservas/{id}")
+    @PATCH("api/reservas/{id}/cancelar")
     suspend fun cancelarReserva(@Path("id") id: Long): Response<Unit>
+    
     // CHATBOT
     @POST("api/chat/preguntar")
     @Headers("Accept: text/plain")
     suspend fun preguntarChatbot(@Body request: PreguntaRequest): Response<String>
+
+    // ==================== INVENTARIO PACIENTE ====================
+    
+    @GET("api/movil/inventario/paciente/{idPaciente}")
+    suspend fun obtenerInventarioPaciente(
+        @Path("idPaciente") idPaciente: Long
+    ): List<ContenedorLecheDto>
+    
+    @PUT("api/movil/inventario/retirar/{idContenedor}")
+    suspend fun retirarContenedor(
+        @Path("idContenedor") idContenedor: Long
+    ): Response<String>
+    
+    // ==================== CUBÍCULOS ====================
+    
+    @GET("api/movil/cubiculos/sala/{idSala}")
+    suspend fun obtenerCubiculosSala(
+        @Path("idSala") idSala: Long
+    ): List<com.example.lactacare.datos.dto.CubiculoDto>
+
+    // ==================== PERFIL PACIENTE ====================
+    
+    @GET("api/movil/perfil/paciente/{id}")
+    suspend fun obtenerPerfilPaciente(
+        @Path("id") id: Long
+    ): Response<com.example.lactacare.datos.dto.PacientePerfilDto>
+
+    @PUT("api/movil/perfil/paciente/{id}")
+    suspend fun actualizarPerfilPaciente(
+        @Path("id") id: Long,
+        @Body request: com.example.lactacare.datos.dto.ActualizarPerfilRequest
+    ): Response<Unit>
 
 }

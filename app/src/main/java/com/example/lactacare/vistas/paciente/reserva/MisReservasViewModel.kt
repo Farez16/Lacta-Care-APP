@@ -38,9 +38,13 @@ class MisReservasViewModel @Inject constructor(
             val result = repository.obtenerMisReservas(pacienteId)
             
             if (result.isSuccess) {
+                // Filtrar solo PENDIENTE y COMPLETADA (excluir CANCELADA)
+                val reservasFiltradas = result.getOrDefault(emptyList())
+                    .filter { it.estado.uppercase() != "CANCELADA" }
+                
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    reservas = result.getOrDefault(emptyList())
+                    reservas = reservasFiltradas
                 )
             } else {
                 _uiState.value = _uiState.value.copy(

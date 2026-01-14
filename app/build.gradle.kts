@@ -5,19 +5,22 @@ plugins {
     id("com.google.gms.google-services")
     id("kotlin-parcelize")
 
-    // --- AGREGADO: Plugins necesarios para Hilt (Inyección de dependencias) ---
-    id("kotlin-kapt")
-    id("com.google.dagger.hilt.android") version "2.55"// Si te da error de versión, revísalo en tu build.gradle raíz
+    // --- CAMBIO: Quitamos kapt y ponemos ksp ---
+    alias(libs.plugins.ksp)
+    // id("kotlin-kapt") // Eliminado porque da error con Kotlin 2.0
+
+    // --- HILT: Sin poner versión (la hereda del build.gradle del proyecto) ---
+    id("com.google.dagger.hilt.android")
 }
 
 android {
     namespace = "com.example.lactacare"
-    compileSdk = 35 // He ajustado esto a 34/35 (Estable). "release(36)" es experimental y puede fallar con Hilt.
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.lactacare"
         minSdk = 26
-        targetSdk = 34// Ajustado a estable
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -39,7 +42,7 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 // Hilt suele preferir 1.8 o 17, el 11 está bien pero a veces da warnings
+        sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
@@ -47,10 +50,7 @@ android {
         jvmTarget = "17"
     }
 
-    // --- AGREGADO: Necesario para que Kapt funcione bien con Hilt ---
-    kapt {
-        correctErrorTypes = true
-    }
+    // El bloque kapt { ... } se ha eliminado porque ya no usamos kapt.
 }
 
 dependencies {
@@ -64,7 +64,7 @@ dependencies {
     implementation(libs.places)
 
     val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
-    implementation(composeBom) // Corregido: Se implementa la variable
+    implementation(composeBom)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -91,7 +91,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.2")
 
     // Network / API
-    implementation("com.squareup.retrofit2:retrofit:2.9.0") // Versión estable estándar
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     implementation("com.google.code.gson:gson:2.10.1")
@@ -110,16 +110,18 @@ dependencies {
     // Iconos
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
-    // --- AGREGADO: HILT (Inyección de Dependencias - VITAL) ---
+    // --- HILT (Inyección de Dependencias) ---
     implementation("com.google.dagger:hilt-android:2.55")
-    kapt("com.google.dagger:hilt-android-compiler:2.55")
 
-    // --- AGREGADO: Hilt para Compose (Para usar hiltViewModel()) ---
+    // --- CAMBIO IMPORTANTE: Usamos ksp en vez de kapt ---
+    ksp("com.google.dagger:hilt-android-compiler:2.55")
+
+    // --- Hilt para Compose ---
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
 
-     //AGREGADO PLAY SERVICES (UBICACION)
+    // PLAY SERVICES (UBICACION)
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 

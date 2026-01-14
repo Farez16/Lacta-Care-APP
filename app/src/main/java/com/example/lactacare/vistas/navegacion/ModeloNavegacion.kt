@@ -25,6 +25,7 @@ sealed class ItemMenu(
     // --- RUTAS PACIENTE ---
     object PacienteInicio : ItemMenu("paciente_home", "Inicio", Icons.Default.Home)
     object PacienteBebe : ItemMenu("paciente_bebe", "Mi Bebé", Icons.Default.ChildCare)
+    object PacienteInventario : ItemMenu("paciente_inventario", "Inventario", Icons.Default.Inventory)
     object PacienteChat : ItemMenu("paciente_chat", "Chat IA", Icons.Outlined.SmartToy)
     object PacientePerfil : ItemMenu("paciente_perfil", "Perfil", Icons.Default.Person)
 
@@ -48,6 +49,7 @@ sealed class ItemMenu(
 val menuPaciente = listOf(
     ItemMenu.PacienteInicio,
     ItemMenu.PacienteBebe,
+    ItemMenu.PacienteInventario,
     ItemMenu.PacientePerfil
 )
 

@@ -98,6 +98,11 @@ class AgendarViewModel @Inject constructor(
         }
     }
 
+
+    /* FUNCIÓN OBSOLETA - Ya no se usa
+     * El flujo correcto ahora es: Sala → Cubículo → Fecha/Hora
+     * Esta función creaba reservas sin seleccionar cubículo
+     *
     fun reservar(lactarioId: Long) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -137,6 +142,7 @@ class AgendarViewModel @Inject constructor(
             }
         }
     }
+    */
     
     fun resetReservaExitosa() {
         _uiState.value = _uiState.value.copy(reservaExitosa = false)

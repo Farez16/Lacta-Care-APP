@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lactacare.datos.dto.BloqueHorarioDto
 import com.example.lactacare.datos.dto.CrearReservaRequest
+import com.example.lactacare.datos.dto.CubiculoIdDto
 import com.example.lactacare.datos.dto.PacienteIdDto
 import com.example.lactacare.datos.dto.SalaIdDto
 import com.example.lactacare.datos.local.SessionManager
@@ -19,6 +20,7 @@ import javax.inject.Inject
 data class SeleccionarFechaHoraUiState(
     val lactarioId: Long = 0,
     val nombreSala: String = "",
+    val cubiculoId: Long = 0,
     val fechaSeleccionada: LocalDate = LocalDate.now(),
     val bloques: List<BloqueHorarioDto> = emptyList(),
     val bloqueSeleccionado: BloqueHorarioDto? = null,
@@ -34,10 +36,11 @@ class SeleccionarFechaHoraViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SeleccionarFechaHoraUiState())
     val uiState = _uiState.asStateFlow()
-    fun inicializar(lactarioId: Long, nombreSala: String) {
+    fun inicializar(lactarioId: Long, nombreSala: String, cubiculoId: Long) {
         _uiState.value = _uiState.value.copy(
             lactarioId = lactarioId,
-            nombreSala = nombreSala
+            nombreSala = nombreSala,
+            cubiculoId = cubiculoId
         )
         cargarDisponibilidad()
     }
@@ -98,6 +101,7 @@ class SeleccionarFechaHoraViewModel @Inject constructor(
                 horaFin = bloque.horaFin,
                 paciente = PacienteIdDto(pacienteId),
                 sala = SalaIdDto(_uiState.value.lactarioId),
+                cubiculo = CubiculoIdDto(_uiState.value.cubiculoId),
                 estado = "PENDIENTE"
             )
             val result = patientRepository.crearReserva(request)
