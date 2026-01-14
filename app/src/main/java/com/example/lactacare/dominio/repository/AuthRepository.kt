@@ -89,4 +89,9 @@ interface AuthRepository {
         currentPassword: String,
         newPassword: String
     ): Result<Unit>
+
+    // ========================================================================
+    // DOCTOR / EMPLEADO HELPERS
+    // ========================================================================
+    suspend fun getEmpleadoData(correo: String): Result<com.example.lactacare.datos.dto.PersonaEmpleadoResponseDto>
 }

@@ -1,8 +1,6 @@
 package com.example.lactacare.vistas.doctor.atencion
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -16,94 +14,100 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.lactacare.vistas.theme.DoctorPrimary
+import com.example.lactacare.vistas.theme.TextoOscuroClean
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaAtencion(
-    reservaId: Long,
+    idReserva: Long,
     nombrePaciente: String,
     onVolver: () -> Unit,
     viewModel: AtencionViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Si tiene éxito, volver automáticamente
-    LaunchedEffect(uiState.isSuccess) {
-        if (uiState.isSuccess) {
-            onVolver()
+    // Handle Success Navigation
+    LaunchedEffect(uiState.success) {
+        if (uiState.success) {
+            onVolver() // Return to Home on success
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Registrar Atención") },
+            CenterAlignedTopAppBar(
+                title = { Text("Atención Clínica", fontWeight = FontWeight.Bold, color = TextoOscuroClean) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = TextoOscuroClean)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DoctorPrimary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
             )
         }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
+                .padding(24.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().wrapContentHeight()
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Header
+                Text(
+                    text = "Paciente: $nombrePaciente",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = DoctorPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Reserva #$idReserva",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
+                
+                HorizontalDivider()
+                
+                Text(
+                    text = "Detalles de Atención",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                // Placeholder for Vital Signs (Backend doesn't support them yet apparently)
+                Text(
+                     text = "Actualmente el sistema registra la fecha y hora de la atención automáticamente al finalizar. Próximamente podrá ingresar signos vitales.",
+                     style = MaterialTheme.typography.bodyMedium,
+                     color = Color.Gray
+                )
+            }
+
+            // Action Button
+            Button(
+                onClick = { viewModel.finalizarAtencion(idReserva) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DoctorPrimary),
+                enabled = !uiState.isLoading
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.CheckCircle, 
-                        contentDescription = null, 
-                        tint = DoctorPrimary,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = "Atender a Paciente",
-                        fontSize = 20.sp, 
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = nombrePaciente, fontSize = 18.sp, color = Color.Gray)
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(color = DoctorPrimary)
-                    } else {
-                        Button(
-                            onClick = { viewModel.registrarAtencion(reservaId) },
-                            colors = ButtonDefaults.buttonColors(containerColor = DoctorPrimary),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Confirmar Atención Realizada")
-                        }
-                    }
-                    
-                    if (uiState.error != null) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = uiState.error ?: "", color = Color.Red)
-                    }
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Icon(Icons.Default.CheckCircle, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Finalizar Atención", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+            
+            if (uiState.error != null) {
+                Text(
+                    text = uiState.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
         }
     }

@@ -34,4 +34,17 @@ class DoctorRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun actualizarReserva(id: Long, reserva: DoctorReservaDto): Result<Boolean> {
+        return try {
+            val response = apiService.actualizarReserva(id, reserva)
+            if (response.isSuccessful) {
+                Result.success(true)
+            } else {
+                Result.failure(Exception(response.message()))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

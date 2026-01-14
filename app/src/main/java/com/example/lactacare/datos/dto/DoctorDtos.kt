@@ -8,7 +8,13 @@ data class DoctorReservaDto(
     @SerializedName("horaInicio") val horaInicio: String, // "HH:mm:ss"
     @SerializedName("horaFin") val horaFin: String?,
     @SerializedName("estado") val estado: String,
-    @SerializedName("personaPaciente") val paciente: PacienteDtoNested?
+    @SerializedName("personaPaciente") val paciente: PacienteDtoNested?,
+    @SerializedName("salaLactancia") val sala: SalaLactanciaDtoNested?
+)
+
+data class SalaLactanciaDtoNested(
+    @SerializedName("idLactario") val id: Int,
+    @SerializedName("nombre") val nombre: String
 )
 
 data class PacienteDtoNested(

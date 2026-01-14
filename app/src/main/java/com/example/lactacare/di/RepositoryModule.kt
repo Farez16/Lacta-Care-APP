@@ -67,4 +67,22 @@ abstract class RepositoryModule {
     abstract fun bindAlertasRepository(
         alertasRepository: AlertasRepository
     ): IAlertasRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindInstitucionRepository(
+        impl: com.example.lactacare.datos.repository.InstitucionRepository
+    ): com.example.lactacare.dominio.repository.IInstitucionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindIARepository(
+        impl: com.example.lactacare.datos.repository.IARepository
+    ): com.example.lactacare.dominio.repository.IIARepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRefrigeradorRepository(
+        impl: com.example.lactacare.datos.repository.RefrigeradorRepository
+    ): com.example.lactacare.dominio.repository.IRefrigeradorRepository
 }

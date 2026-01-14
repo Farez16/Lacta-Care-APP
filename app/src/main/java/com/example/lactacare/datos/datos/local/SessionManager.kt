@@ -18,8 +18,10 @@ class SessionManager @Inject constructor(
         val KEY_TOKEN = stringPreferencesKey("auth_token")
         val KEY_USER_ID = longPreferencesKey("user_id")
         val KEY_FULL_NAME = stringPreferencesKey("user_fullname")
+        val KEY_EMAIL = stringPreferencesKey("user_email") // <--- NUEVO
         val KEY_ROLE = stringPreferencesKey("user_role") // "PACIENTE" o "EMPLEADO"
         val KEY_PROFILE_COMPLETED = booleanPreferencesKey("profile_completed")
+        val KEY_SALA_ID = intPreferencesKey("user_sala_id") // <--- NUEVO
         
         // --- DATOS DEL BEBÉ (Local Persistence) ---
         val KEY_BABY_NAME = stringPreferencesKey("baby_name")
@@ -28,11 +30,12 @@ class SessionManager @Inject constructor(
     }
 
     // Guardar todos los datos del usuario al hacer login
-    suspend fun saveAuthData(token: String, id: Long, name: String, role: String, completed: Boolean) {
+    suspend fun saveAuthData(token: String, id: Long, name: String, email: String, role: String, completed: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_TOKEN] = token
             prefs[KEY_USER_ID] = id
             prefs[KEY_FULL_NAME] = name
+            prefs[KEY_EMAIL] = email
             prefs[KEY_ROLE] = role
             prefs[KEY_PROFILE_COMPLETED] = completed
         }
@@ -46,7 +49,9 @@ class SessionManager @Inject constructor(
 
     // --- AGREGADO: Obtener Nombre y ID ---
     val userName: Flow<String?> = context.dataStore.data.map { it[KEY_FULL_NAME] }
+    val userEmail: Flow<String?> = context.dataStore.data.map { it[KEY_EMAIL] } // <--- NUEVO
     val userId: Flow<Long?> = context.dataStore.data.map { it[KEY_USER_ID] }
+    val userSalaId: Flow<Int?> = context.dataStore.data.map { it[KEY_SALA_ID] } // <--- NUEVO
     // -----------------------------------------------------------------------
 
     // Datos del Bebé
@@ -57,6 +62,12 @@ class SessionManager @Inject constructor(
             prefs[KEY_BABY_NAME] = name
             prefs[KEY_BABY_DOB] = dob
             prefs[KEY_BABY_GENDER] = gender
+        }
+    }
+
+    suspend fun saveSalaId(salaId: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SALA_ID] = salaId
         }
     }
 

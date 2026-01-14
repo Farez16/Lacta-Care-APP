@@ -23,7 +23,7 @@ import com.example.lactacare.vistas.auth.*
 import com.example.lactacare.vistas.home.PantallaHome
 // --- IMPORT NUEVO ---
 import com.example.lactacare.vistas.admin.usuarios.PantallaGestionUsuarios
-import com.example.lactacare.vistas.admin.creardoctor.PantallaCrearDoctor
+import com.example.lactacare.vistas.admin.usuarios.PantallaCrearEmpleado
 import com.example.lactacare.vistas.doctor.atencion.PantallaAtencion
 // --------------------
 import dagger.hilt.android.AndroidEntryPoint
@@ -288,7 +288,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavReservas = { /* Navegar a reservas */ },
                                 onNavBebe = { /* Navegar a perfil bebé */ },
-                                onNavInfo = { /* Navegar a info */ }
+                                onNavInfo = { /* Navegar a info */ },
+                                onNavReportes = { navController.navigate("admin_reporte") }
                             )
                         }
                         // --- NUEVA PANTALLA: GESTIÓN DE USUARIOS (ADMIN) ---
@@ -302,7 +303,7 @@ class MainActivity : ComponentActivity() {
                         }
                         // --- PANTALLA: CREAR DOCTOR (ADMIN) ---
                         composable("crear_doctor") {
-                            PantallaCrearDoctor(
+                            PantallaCrearEmpleado(
                                 onVolver = { navController.popBackStack() }
                             )
                         }
@@ -318,8 +319,14 @@ class MainActivity : ComponentActivity() {
                             val nombre = backStackEntry.arguments?.getString("nombre") ?: "Paciente"
 
                             PantallaAtencion(
-                                reservaId = id,
+                                idReserva = id,
                                 nombrePaciente = nombre,
+                                onVolver = { navController.popBackStack() }
+                            )
+                        }
+                        // --- PANTALLA: REPORTES ADMIN ---
+                        composable("admin_reporte") {
+                            com.example.lactacare.vistas.admin.reportes.PantallaReportesAdmin(
                                 onVolver = { navController.popBackStack() }
                             )
                         }

@@ -7,8 +7,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.outlined.Construction
 import androidx.compose.material.icons.outlined.Notifications
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,7 +29,7 @@ import com.example.lactacare.vistas.navegacion.ItemMenu
 fun TopBarHome(
     saludo: String, 
     colorIcono: Color,
-    onMenuClick: () -> Unit = {} // Nuevo callback
+    onMenuClick: () -> Unit = {},
 ) {
     Row(
         modifier = Modifier
@@ -36,8 +38,11 @@ fun TopBarHome(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Botón Hamburguesa (Nuevo)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            // Botón Hamburguesa
             IconButton(onClick = onMenuClick) {
                 Icon(Icons.Default.Menu, contentDescription = "Menú", tint = TextoOscuroClean)
             }
@@ -45,9 +50,9 @@ fun TopBarHome(
             
             Box(
                 modifier = Modifier
-                    .size(40.dp) // Ligeramente más pequeño para ajustar espacio
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.LightGray) // Placeholder foto
+                    .background(Color.LightGray)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
@@ -56,20 +61,14 @@ fun TopBarHome(
                     text = saludo,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextoOscuroClean
+                    color = TextoOscuroClean,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
         }
 
-        IconButton(
-            onClick = { },
-            modifier = Modifier
-                .size(42.dp)
-                .shadow(2.dp, CircleShape)
-                .background(Color.White, CircleShape)
-        ) {
-            Icon(Icons.Outlined.Notifications, contentDescription = "Alertas", tint = colorIcono)
-        }
+        // Notifications removed as per user request
     }
 }
 
