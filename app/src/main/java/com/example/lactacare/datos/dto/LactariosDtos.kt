@@ -43,3 +43,10 @@ data class DiasLaborablesSalaDto(
     @SerializedName("sabado") val sabado: Boolean = false,
     @SerializedName("domingo") val domingo: Boolean = false
 )
+
+// DTO para disponibilidad de horarios (usado en reservas)
+data class BloqueHorarioDto(
+    @SerializedName("horaInicio") val horaInicio: String,
+    @SerializedName("horaFin") val horaFin: String,
+    @SerializedName("disponible") val disponible: Boolean
+)

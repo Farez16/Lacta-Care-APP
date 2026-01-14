@@ -36,6 +36,7 @@ fun PantallaHomePaciente(
     onNavBebe: () -> Unit,
     onNavInfo: (String) -> Unit,
     onNavChat: () -> Unit,
+    onNavMisReservas: () -> Unit,
     viewModel: PatientHomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -44,11 +45,12 @@ fun PantallaHomePaciente(
     LaunchedEffect(Unit) {
         viewModel.cargarDatosDashboard()
     }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             floatingActionButton = {
                 FloatingActionButton(
-                    onClick = onNavChat, // Navegar al chat completo
+                    onClick = onNavChat,
                     containerColor = MomPrimary,
                     contentColor = Color.White,
                     shape = CircleShape
@@ -61,10 +63,11 @@ fun PantallaHomePaciente(
                 modifier = Modifier.padding(padding),
                 proximaCita = uiState.proximaCita,
                 nombreBebe = uiState.nombreBebe,
-                sugerencias = uiState.sugerencias, // Pasamos la lista real
+                sugerencias = uiState.sugerencias,
                 onNavReservas = onNavReservas,
                 onNavBebe = onNavBebe,
-                onNavInfo = onNavInfo
+                onNavInfo = onNavInfo,
+                onNavMisReservas = onNavMisReservas
             )
         }
 
@@ -76,6 +79,7 @@ fun PantallaHomePaciente(
         }
     }
 }
+
 @Composable
 fun DashboardPacienteContent(
     modifier: Modifier = Modifier,
@@ -84,7 +88,8 @@ fun DashboardPacienteContent(
     sugerencias: List<com.example.lactacare.datos.dto.SugerenciaDto> = emptyList(),
     onNavReservas: () -> Unit,
     onNavBebe: () -> Unit,
-    onNavInfo: (String) -> Unit
+    onNavInfo: (String) -> Unit,
+    onNavMisReservas: () -> Unit
 ) {
     // Estado para el dialog
     var tipSeleccionado by remember { mutableStateOf<com.example.lactacare.datos.dto.SugerenciaDto?>(null) }
@@ -113,41 +118,97 @@ fun DashboardPacienteContent(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
-                    Text("Lactario Principal", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = DashboardTextLight)
+                    Text(
+                        "Lactario Principal",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DashboardTextLight
+                    )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (proximaCita != null) {
                         // CASO: TIENE CITA
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.CheckCircle, null, tint = DashboardPinkIcon, modifier = Modifier.size(36.dp))
+                            Icon(
+                                Icons.Filled.CheckCircle,
+                                null,
+                                tint = DashboardPinkIcon,
+                                modifier = Modifier.size(36.dp)
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Sala ${proximaCita.sala.nombre ?: proximaCita.sala.id}", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = DashboardTextDark)
+                            Text(
+                                "Sala ${proximaCita.nombreSala}",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = DashboardTextDark
+                            )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Tu reserva es el ${proximaCita.fecha} a las ${proximaCita.horaInicio}", fontSize = 16.sp, color = DashboardTextLight)
-
+                        Text(
+                            "Tu reserva es el ${proximaCita.fecha} a las ${proximaCita.horaInicio}",
+                            fontSize = 16.sp,
+                            color = DashboardTextLight
+                        )
+// ✅ AGREGAR ESTAS LÍNEAS
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = onNavReservas,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MomAccent,
+                                contentColor = Color(0xFFC13B84)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            elevation = ButtonDefaults.buttonElevation(0.dp)
+                        ) {
+                            Text(
+                                "Reservar Otra Sala",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                        }
                     } else {
                         // CASO: NO TIENE CITA
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.EventAvailable, null, tint = Color.Gray, modifier = Modifier.size(36.dp))
+                            Icon(
+                                Icons.Outlined.EventAvailable,
+                                null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(36.dp)
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Sin reservas activas", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = DashboardTextDark)
+                            Text(
+                                "Sin reservas activas",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = DashboardTextDark
+                            )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Reserva tu espacio en el lactario ahora.", fontSize = 16.sp, color = DashboardTextLight)
+                        Text(
+                            "Reserva tu espacio en el lactario ahora.",
+                            fontSize = 16.sp,
+                            color = DashboardTextLight
+                        )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Botón principal para Reservar
                         Button(
-                            onClick = onNavReservas, // Va al buscador
-                            colors = ButtonDefaults.buttonColors(containerColor = MomAccent, contentColor = Color(0xFFC13B84)),
+                            onClick = onNavReservas,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MomAccent,
+                                contentColor = Color(0xFFC13B84)
+                            ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             elevation = ButtonDefaults.buttonElevation(0.dp)
                         ) {
-                            Text("Reservar Ahora", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(
+                                "Reservar Ahora",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
                         }
                     }
                 }
@@ -166,64 +227,165 @@ fun DashboardPacienteContent(
                     modifier = Modifier.padding(24.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Surface(shape = CircleShape, color = Color.White, shadowElevation = 2.dp, modifier = Modifier.size(64.dp)) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White,
+                        shadowElevation = 2.dp,
+                        modifier = Modifier.size(64.dp)
+                    ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.ChildCare, null, tint = DashboardPinkIcon, modifier = Modifier.size(32.dp))
+                            Icon(
+                                Icons.Filled.ChildCare,
+                                null,
+                                tint = DashboardPinkIcon,
+                                modifier = Modifier.size(32.dp)
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = if (!nombreBebe.isNullOrEmpty()) nombreBebe else "Mi Bebé", 
-                        fontSize = 18.sp, 
-                        fontWeight = FontWeight.Bold, 
+                        text = if (!nombreBebe.isNullOrEmpty()) nombreBebe else "Mi Bebé",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
                         color = DashboardTextDark
                     )
                     Text(
-                        text = if (!nombreBebe.isNullOrEmpty()) "Ver registro" else "Registra y sigue el crecimiento.", 
-                        fontSize = 14.sp, 
-                        color = DashboardTextLight, 
+                        text = if (!nombreBebe.isNullOrEmpty()) "Ver registro" else "Registra y sigue el crecimiento.",
+                        fontSize = 14.sp,
+                        color = DashboardTextLight,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = onNavBebe,
-                        colors = ButtonDefaults.buttonColors(containerColor = MomAccent, contentColor = Color(0xFFC13B84)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MomAccent,
+                            contentColor = Color(0xFFC13B84)
+                        ),
                         shape = RoundedCornerShape(50),
                         elevation = ButtonDefaults.buttonElevation(0.dp),
                         modifier = Modifier.height(40.dp)
                     ) {
-                        Text(if (!nombreBebe.isNullOrEmpty()) "Editar Perfil" else "Añadir Bebé", fontWeight = FontWeight.Bold)
+                        Text(
+                            if (!nombreBebe.isNullOrEmpty()) "Editar Perfil" else "Añadir Bebé",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
         }
 
-        // 3. INFORMATIVO (REAL TIPS)
+        // 3. TARJETA MIS RESERVAS
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(2.dp),
+                modifier = Modifier.fillMaxWidth().clickable { onNavMisReservas() }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Icono
+                    Surface(
+                        shape = CircleShape,
+                        color = MomAccent.copy(alpha = 0.3f),
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Filled.CalendarMonth,
+                                contentDescription = null,
+                                tint = DashboardPinkIcon,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    // Texto
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Mis Reservas",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DashboardTextDark
+                        )
+                        Text(
+                            "Ver todas mis reservas",
+                            fontSize = 14.sp,
+                            color = DashboardTextLight,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+
+                    // Flecha
+                    Icon(
+                        Icons.Filled.ChevronRight,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // 4. INFORMATIVO (REAL TIPS)
         if (sugerencias.isNotEmpty()) {
             item {
                 Column {
-                    Text("Tips Informativos", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = DashboardTextDark, modifier = Modifier.padding(bottom = 12.dp))
+                    Text(
+                        "Tips Informativos",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DashboardTextDark,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(sugerencias) { tip ->
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = Color.White),
                                 shape = RoundedCornerShape(16.dp),
                                 elevation = CardDefaults.cardElevation(1.dp),
-                                modifier = Modifier.width(200.dp).height(180.dp).clickable { 
-                                    tipSeleccionado = tip // Abrir dialog
-                                } 
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .height(180.dp)
+                                    .clickable { tipSeleccionado = tip }
                             ) {
                                 Column(
                                     modifier = Modifier.fillMaxSize().padding(16.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Top 
+                                    verticalArrangement = Arrangement.Top
                                 ) {
-                                    Icon(Icons.Outlined.Lightbulb, null, tint = DashboardPinkIcon, modifier = Modifier.size(32.dp))
+                                    Icon(
+                                        Icons.Outlined.Lightbulb,
+                                        null,
+                                        tint = DashboardPinkIcon,
+                                        modifier = Modifier.size(32.dp)
+                                    )
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(tip.titulo, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = DashboardTextDark, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Text(
+                                        tip.titulo,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 15.sp,
+                                        color = DashboardTextDark,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    // Show preview of detail
-                                    Text(tip.detalle, fontSize = 12.sp, color = DashboardTextLight, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                    Text(
+                                        tip.detalle ?:"",
+                                        fontSize = 12.sp,
+                                        color = DashboardTextLight,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
@@ -232,7 +394,6 @@ fun DashboardPacienteContent(
             }
         }
 
-        
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
@@ -252,46 +413,59 @@ fun DialogoDetalleTip(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Lightbulb, null, tint = DashboardPinkIcon, modifier = Modifier.size(32.dp))
+                    Icon(
+                        Icons.Outlined.Lightbulb,
+                        null,
+                        tint = DashboardPinkIcon,
+                        modifier = Modifier.size(32.dp)
+                    )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Tip Informativo", fontSize = 14.sp, color = DashboardTextLight, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Tip Informativo",
+                        fontSize = 14.sp,
+                        color = DashboardTextLight,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, null, tint = Color.Gray)
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
                     text = tip.titulo,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = DashboardTextDark
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Contenido Scrollable
                 val scrollState = rememberScrollState()
-                Column(modifier = Modifier
-                    .heightIn(max = 300.dp)
-                    .verticalScroll(scrollState)
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(scrollState)
                 ) {
                     Text(
-                        text = tip.detalle,
+                        text = tip.detalle?: "Sin detalles disponibles",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.DarkGray,
                         lineHeight = 22.sp
                     )
-                    // URL de imagen eliminada por solicitud del usuario
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MomAccent, contentColor = Color(0xFFC13B84))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MomAccent,
+                        contentColor = Color(0xFFC13B84)
+                    )
                 ) {
                     Text("Entendido")
                 }

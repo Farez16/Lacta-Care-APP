@@ -1,6 +1,6 @@
 package com.example.lactacare.datos.network
 
-import com.example.lactacare.datos.dto.PacienteDto
+import com.example.lactacare.datos.dto.BloqueHorarioDto
 import com.example.lactacare.datos.dto.ReservaDto
 import com.example.lactacare.datos.dto.UsuarioResponseDto
 import retrofit2.Response
@@ -13,6 +13,7 @@ import com.example.lactacare.datos.dto.PreguntaRequest
 import retrofit2.http.Headers
 import retrofit2.http.DELETE
 import retrofit2.http.PUT
+import retrofit2.http.PATCH
 import retrofit2.http.Path
 import retrofit2.http.Multipart
 import retrofit2.http.Part
@@ -74,7 +75,7 @@ interface ApiService {
     ): Response<ContenedorLecheDto>
 
     // 6. SALAS DE LACTANCIA
-    @GET("api/lactarios")
+    @GET("api/lactarios/activos")
     suspend fun obtenerLactarios(): Response<List<com.example.lactacare.datos.dto.SalaLactanciaDto>>
 
     @POST("api/lactarios")
@@ -91,6 +92,12 @@ interface ApiService {
 
     @DELETE("api/lactarios/{id}")
     suspend fun eliminarLactario(@Path("id") id: Long): Response<Unit>
+
+    @GET("api/reservas/disponibilidad/{idSala}/{fecha}")
+    suspend fun obtenerDisponibilidad(
+        @Path("idSala") idSala: Long,
+        @Path("fecha") fecha: String
+    ): Response<List<BloqueHorarioDto>>
 
     // --- ALERTAS ---
     @GET("api/sistema-alertas")
@@ -143,12 +150,49 @@ interface ApiService {
 
     @POST("api/reservas")
     suspend fun crearReserva(@Body request: com.example.lactacare.datos.dto.CrearReservaRequest): Response<Any>
+
+    @PATCH("api/reservas/{id}/cancelar")
+    suspend fun cancelarReserva(@Path("id") id: Long): Response<Unit>
+    
     // CHATBOT
     @POST("api/chat/preguntar")
     @Headers("Accept: text/plain")
     suspend fun preguntarChatbot(@Body request: PreguntaRequest): Response<String>
 
-    // 9. INSTITUCIONES
+    // ==================== INVENTARIO PACIENTE ====================
+    
+    @GET("api/movil/inventario/paciente/{idPaciente}")
+    suspend fun obtenerInventarioPaciente(
+        @Path("idPaciente") idPaciente: Long
+    ): List<ContenedorLecheDto>
+    
+    @PUT("api/movil/inventario/retirar/{idContenedor}")
+    suspend fun retirarContenedor(
+        @Path("idContenedor") idContenedor: Long
+    ): Response<String>
+    
+    // ==================== CUBÍCULOS ====================
+    
+    @GET("api/movil/cubiculos/sala/{idSala}")
+    suspend fun obtenerCubiculosSala(
+        @Path("idSala") idSala: Long
+    ): List<com.example.lactacare.datos.dto.CubiculoDto>
+
+    // ==================== PERFIL PACIENTE ====================
+    
+    @GET("api/movil/perfil/paciente/{id}")
+    suspend fun obtenerPerfilPaciente(
+        @Path("id") id: Long
+    ): Response<com.example.lactacare.datos.dto.PacientePerfilDto>
+
+    @PUT("api/movil/perfil/paciente/{id}")
+    suspend fun actualizarPerfilPaciente(
+        @Path("id") id: Long,
+        @Body request: com.example.lactacare.datos.dto.ActualizarPerfilRequest
+    ): Response<Unit>
+
+    // ==================== INSTITUCIONES ====================
+    
     @GET("api/instituciones")
     suspend fun obtenerInstituciones(): Response<List<com.example.lactacare.dominio.model.Institucion>>
 
@@ -167,7 +211,8 @@ interface ApiService {
     @DELETE("api/instituciones/{id}")
     suspend fun eliminarInstitucion(@Path("id") id: Long): Response<Unit>
 
-    // 10. IA - DOCUMENTOS (Chatbot)
+    // ==================== IA - DOCUMENTOS (Chatbot) ====================
+    
     @retrofit2.http.Multipart
     @POST("api/documentos/upload")
     suspend fun subirDocumento(@retrofit2.http.Part archivo: MultipartBody.Part): Response<Map<String, Any>>
@@ -177,8 +222,4 @@ interface ApiService {
 
     @DELETE("api/documentos/{id}")
     suspend fun eliminarDocumento(@Path("id") id: Long): Response<Map<String, Any>>
-
-    // 11. REFRIGERADORES (Ya existÃ­an parciales, asegurando CRUD completo)
-    // El 'obtenerRefrigeradores' ya estaba en la lÃ­nea 70, lo consolidamos si es necesario o agregamos lo faltante.
-    // Nota: LÃ­neas 70-83 ya tienen CRUD bÃ¡sico. Verificaremos que coincida con el controlador.
 }

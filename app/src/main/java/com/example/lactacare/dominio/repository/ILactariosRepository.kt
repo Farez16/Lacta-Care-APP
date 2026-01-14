@@ -1,5 +1,6 @@
 package com.example.lactacare.dominio.repository
 
+import com.example.lactacare.datos.dto.BloqueHorarioDto
 import com.example.lactacare.datos.dto.SalaLactanciaDto
 import com.example.lactacare.datos.dto.SalaLactanciaConCubiculosDTO
 
@@ -10,4 +11,9 @@ interface ILactariosRepository {
     suspend fun crearSalaConCubiculos(dto: SalaLactanciaConCubiculosDTO): Result<Any>
     suspend fun editarSala(id: Long, sala: SalaLactanciaDto): Result<SalaLactanciaDto>
     suspend fun eliminarSala(id: Long): Result<Unit>
+
+    suspend fun obtenerDisponibilidad(
+        idSala: Long,
+        fecha: String
+    ): Result<List<BloqueHorarioDto>>
 }

@@ -33,6 +33,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.ZoneOffset
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.lactacare.datos.ValidationUtils
 
 // --- COLORES ESTILO CLEAN ---
 val TextoOscuroClean = Color(0xFF546E7A)
@@ -95,7 +96,7 @@ fun PantallaRegistroPersona(
                             .atZone(ZoneOffset.UTC)
                             .toLocalDate()
 
-                        if (esMayorDeEdad(fechaSeleccionada)) {
+                        if (ValidationUtils.esMayorDeEdad(fechaSeleccionada)) {
                             // Guardamos en formato String estándar ISO
                             viewModel.onFechaNacimientoChange(
                                 fechaSeleccionada.format(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -217,7 +218,15 @@ fun PantallaRegistroPersona(
             SeccionFormulario("Datos Personales", colorPrincipal)
 
             CampoRegistroClean(label = "Cédula / DNI", valor = datos.cedula, placeholder = "110...", icon = Icons.Outlined.Badge, teclado = KeyboardType.Number, colorFocus = colorPrincipal) { viewModel.onCedulaChange(it) }
-
+// NUEVO: Mostrar error si existe
+            if (datos.errorCedula != null) {
+                Text(
+                    text = datos.errorCedula!!,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                )
+            }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.weight(1f)) {
                     CampoRegistroClean(label = "Primer Nombre", valor = datos.primerNombre, placeholder = "Juan", icon = Icons.Outlined.Person, colorFocus = colorPrincipal) { viewModel.onPrimerNombreChange(it) }
@@ -269,37 +278,66 @@ fun PantallaRegistroPersona(
             SeccionFormulario("Cuenta", colorPrincipal)
 
             CampoRegistroClean(label = "Correo Electrónico", valor = datos.correo, placeholder = "tu@email.com", icon = Icons.Outlined.Email, teclado = KeyboardType.Email, colorFocus = colorPrincipal) { viewModel.onCorreoChange(it) }
-
+// NUEVO: Mostrar error si existe
+            if (datos.errorCorreo != null) {
+                Text(
+                    text = datos.errorCorreo!!,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                )
+            }
             CampoRegistroClean(label = "Teléfono", valor = datos.telefono, placeholder = "0987654321", icon = Icons.Outlined.Phone, teclado = KeyboardType.Phone, colorFocus = colorPrincipal) { viewModel.onTelefonoChange(it) }
-
+// NUEVO: Mostrar error si existe
+            if (datos.errorTelefono != null) {
+                Text(
+                    text = datos.errorTelefono!!,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                )
+            }
             // CAMPO CONTRASEÑA
-            Text(
-                text = "Contraseña",
-                fontWeight = FontWeight.SemiBold,
-                color = TextoOscuroClean,
-                fontSize = 14.sp,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-            )
-            OutlinedTextField(
-                value = datos.password,
-                onValueChange = { viewModel.onPasswordChange(it) },
-                placeholder = { Text("Mínimo 8 caracteres", color = Color.Gray) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = inputColorsClean(colorPrincipal),
-                // CORRECCIÓN: Configuración correcta de teclado para password
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                singleLine = true,
-                trailingIcon = {
-                    val imagen = if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imagen, contentDescription = null, tint = colorPrincipal)
-                    }
-                }
-            )
+            // CAMPO CONTRASEÑA (ENVUELTO EN COLUMN PARA CONSISTENCIA)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Contraseña",
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextoOscuroClean,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
 
-            Spacer(modifier = Modifier.height(30.dp))
+                OutlinedTextField(
+                    value = datos.password,
+                    onValueChange = { viewModel.onPasswordChange(it) },
+                    placeholder = { Text("Mínimo 8 caracteres", color = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = inputColorsClean(colorPrincipal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    singleLine = true,
+                    trailingIcon = {
+                        val imagen = if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imagen, contentDescription = null, tint = colorPrincipal)
+                        }
+                    }
+                )
+
+                if (datos.errorPassword != null) {
+                    Text(
+                        text = datos.errorPassword!!,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            Spacer(modifier = Modifier.height(14.dp)) // Ajustado para mantener el espaciado total de 30.dp
 
             // MENSAJE FEEDBACK
             if (mensaje != null) {
@@ -345,15 +383,6 @@ fun PantallaRegistroPersona(
         }
     }
 }
-
-// --- FUNCIONES AUXILIARES ---
-
-fun esMayorDeEdad(fechaNacimiento: LocalDate): Boolean {
-    val hoy = LocalDate.now()
-    return fechaNacimiento.plusYears(18).isBefore(hoy) ||
-            fechaNacimiento.plusYears(18).isEqual(hoy)
-}
-
 @Composable
 fun SeccionFormulario(titulo: String, color: Color) {
     Text(

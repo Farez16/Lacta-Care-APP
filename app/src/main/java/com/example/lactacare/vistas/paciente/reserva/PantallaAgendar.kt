@@ -1,5 +1,8 @@
 package com.example.lactacare.vistas.paciente.reserva
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.outlined.Schedule
@@ -19,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,22 +31,46 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.lactacare.dominio.model.Lactario
 import com.example.lactacare.vistas.theme.*
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+
+// Función para abrir Google Maps
+fun abrirGoogleMaps(context: Context, latitud: String, longitud: String, nombre: String) {
+    val lat = latitud.toDoubleOrNull() ?: 0.0
+    val lng = longitud.toDoubleOrNull() ?: 0.0
+
+    // URI para Google Maps
+    val uri = "geo:$lat,$lng?q=$lat,$lng($nombre)"
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+    intent.setPackage("com.google.android.apps.maps")
+
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        // Si Google Maps no está instalado, abrir en navegador
+        val webUri = "https://www.google.com/maps/search/?api=1&query=$lat,$lng"
+        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(webUri))
+        context.startActivity(webIntent)
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaAgendar(
     onVolver: () -> Unit,
+    onNavSeleccionarHorario: (Long, String) -> Unit = { _, _ -> }, // ✅ AGREGAR
     viewModel: AgendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val textoBusqueda by viewModel.busqueda.collectAsState()
+    val lactariosFiltrados by viewModel.lactariosFiltrados.collectAsState()
 
     // Manejo del éxito de la reserva
     if (uiState.reservaExitosa) {
         AlertDialog(
-            onDismissRequest = { 
+            onDismissRequest = {
                 viewModel.resetReservaExitosa()
-                onVolver() 
+                onVolver()
             },
             title = { Text("¡Reserva Exitosa!") },
             text = { Text("Tu espacio en el lactario ha sido reservado para hoy.") },
@@ -57,7 +86,7 @@ fun PantallaAgendar(
     }
 
     if (uiState.error != null) {
-         AlertDialog(
+        AlertDialog(
             onDismissRequest = { viewModel.clearError() },
             title = { Text("Error") },
             text = { Text(uiState.error ?: "Error desconocido") },
@@ -81,27 +110,45 @@ fun PantallaAgendar(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+        // SwipeRefresh wrapper
+        SwipeRefresh(
+            state = rememberSwipeRefreshState(uiState.isLoading),
+            onRefresh = { viewModel.cargarLactarios() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // BUSCADOR
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    BuscadorEstiloPaciente(textoBusqueda) { viewModel.onBusquedaChanged(it) }
+                }
 
-            // BUSCADOR
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                BuscadorEstiloPaciente(textoBusqueda) { viewModel.onBusquedaChanged(it) }
-            }
-
-            // CONTENIDO
-            if (uiState.isLoading) {
-                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { 
-                     CircularProgressIndicator(color = MintPrimary) 
-                 }
-            } else {
-                 ListaLactariosPaciente(uiState.lactarios, viewModel) // Pasamos VM para el click handle
+                // CONTENIDO
+                if (uiState.isLoading && uiState.lactarios.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MintPrimary)
+                    }
+                } else {
+                    ListaLactariosPaciente(
+                        lactariosFiltrados,
+                        viewModel,
+                        onNavSeleccionarHorario
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun ListaLactariosPaciente(lactarios: List<Lactario>, viewModel: AgendarViewModel) {
+fun ListaLactariosPaciente(
+    lactarios: List<Lactario>,
+    viewModel: AgendarViewModel,
+    onNavSeleccionarHorario: (Long, String) -> Unit // ✅ AGREGAR
+) {
+    val context = LocalContext.current  // ✅ AGREGAR
+
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -113,7 +160,17 @@ fun ListaLactariosPaciente(lactarios: List<Lactario>, viewModel: AgendarViewMode
             items(lactarios) { lactario ->
                 CardSalaPaciente(
                     lactario = lactario,
-                    onReservar = { viewModel.reservar(lactario.id.toLong()) }
+                    onReservar = {  // ✅ CAMBIAR ESTO
+                        onNavSeleccionarHorario(lactario.id.toLong(), lactario.nombre)
+                    },
+                    onVerMapa = {
+                        abrirGoogleMaps(
+                            context = context,
+                            latitud = lactario.latitud,
+                            longitud = lactario.longitud,
+                            nombre = lactario.nombre
+                        )
+                    }
                 )
             }
         }
@@ -121,8 +178,11 @@ fun ListaLactariosPaciente(lactarios: List<Lactario>, viewModel: AgendarViewMode
 }
 
 @Composable
-fun CardSalaPaciente(lactario: Lactario, onReservar: () -> Unit) {
-    // Estado simulado visualmente correcto para la lista
+fun CardSalaPaciente(
+    lactario: Lactario,
+    onReservar: () -> Unit,
+    onVerMapa: () -> Unit
+) {
     val statusColor = StatusGreen
     val statusText = "Disponible"
 
@@ -134,8 +194,7 @@ fun CardSalaPaciente(lactario: Lactario, onReservar: () -> Unit) {
         elevation = CardDefaults.cardElevation(2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(170.dp)
-            .clickable { onReservar() } // Click para reservar
+            .height(180.dp)
     ) {
         Row(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             // INFO
@@ -157,17 +216,50 @@ fun CardSalaPaciente(lactario: Lactario, onReservar: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Schedule, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("08:00 - 18:00", fontSize = 12.sp, color = Color.Gray)
+                    Text(lactario.obtenerHorario(), fontSize = 12.sp, color = Color.Gray)
                 }
 
-                Button(
-                    onClick = onReservar,
-                    colors = ButtonDefaults.buttonColors(containerColor = MomAccent, contentColor = Color(0xFFC13B84)),
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.height(32.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                // Botones
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Reservar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    // Botón Ver Mapa
+                    OutlinedButton(
+                        onClick = onVerMapa,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MomPrimary
+                        ),
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Map,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Mapa", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Botón Reservar
+                    Button(
+                        onClick = onReservar,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MomAccent,
+                            contentColor = Color(0xFFC13B84)
+                        ),
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Text("Reservar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))

@@ -38,16 +38,32 @@ class AgendarViewModel @Inject constructor(
     private val _busqueda = MutableStateFlow("")
     val busqueda = _busqueda.asStateFlow()
 
+    private val _lactariosFiltrados = MutableStateFlow<List<Lactario>>(emptyList())
+    val lactariosFiltrados = _lactariosFiltrados.asStateFlow()
+
     init {
         cargarLactarios()
     }
 
     fun onBusquedaChanged(query: String) {
         _busqueda.value = query
-        // Aquí se podría filtrar la lista localmente si se desea
+        filtrarLactarios(query)
     }
 
-    private fun cargarLactarios() {
+    private fun filtrarLactarios(query: String) {
+        val lista = if (query.isBlank()) {
+            _uiState.value.lactarios
+        } else {
+            _uiState.value.lactarios.filter { lactario ->
+                lactario.nombre.contains(query, ignoreCase = true) ||
+                lactario.direccion.contains(query, ignoreCase = true) ||
+                lactario.nombreInstitucion.contains(query, ignoreCase = true)
+            }
+        }
+        _lactariosFiltrados.value = lista
+    }
+
+    fun cargarLactarios() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val result = lactariosRepository.obtenerSalas()
@@ -60,15 +76,19 @@ class AgendarViewModel @Inject constructor(
                         direccion = dto.direccion ?: "Sin dirección",
                         correo = dto.correo ?: "",
                         telefono = dto.telefono ?: "",
-                        latitud = "0.0",
-                        longitud = "0.0",
-                        idInstitucion = 0
-                     )
+                        latitud = dto.latitud ?: "0.0",
+                        longitud = dto.longitud ?: "0.0",
+                        idInstitucion = dto.institucion?.idInstitucion?.toInt() ?: 0,
+                        horaApertura = dto.horario?.horaInicio?.substring(0, 5) ?: "08:00",
+                        horaCierre = dto.horario?.horaFin?.substring(0, 5) ?: "18:00",
+                        nombreInstitucion = dto.institucion?.nombreInstitucion ?: ""
+                    )
                 }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     lactarios = domainList
                 )
+                _lactariosFiltrados.value = domainList
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -78,6 +98,11 @@ class AgendarViewModel @Inject constructor(
         }
     }
 
+
+    /* FUNCIÓN OBSOLETA - Ya no se usa
+     * El flujo correcto ahora es: Sala → Cubículo → Fecha/Hora
+     * Esta función creaba reservas sin seleccionar cubículo
+     *
     fun reservar(lactarioId: Long) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -117,6 +142,7 @@ class AgendarViewModel @Inject constructor(
             }
         }
     }
+    */
     
     fun resetReservaExitosa() {
         _uiState.value = _uiState.value.copy(reservaExitosa = false)

@@ -2,6 +2,7 @@ package com.example.lactacare.vistas.home
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.remote.creation.first
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +39,10 @@ import com.example.lactacare.vistas.paciente.home.PantallaHomePaciente
 import com.example.lactacare.vistas.paciente.perfil.PantallaPerfilPaciente
 import com.example.lactacare.vistas.paciente.reserva.PantallaAgendar
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.runBlocking  // ✅ AGREGAR ESTA LÍNEA
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.lactacare.vistas.paciente.reserva.PantallaSeleccionarFechaHora
 @Composable
 fun PantallaHome(
     rolUsuario: RolUsuario,
@@ -49,6 +53,7 @@ fun PantallaHome(
     onNavReportes: () -> Unit = {}, // Nuevo callback
     onNavGestion: () -> Unit = {},
     onNavAtencion: (Long, String) -> Unit = { _, _ -> },
+    onNavMisReservas: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
@@ -56,6 +61,7 @@ fun PantallaHome(
 
     // --- ACCIONES DE NAVEGACIÓN ---
     val goReservas = { navController.navigate("agendar_paciente") }
+    val goMisReservas = { navController.navigate("mis_reservas_paciente") }
     // ----------------------------
 
     // 1. Configuración de Menú y Colores según Rol
@@ -157,18 +163,88 @@ fun PantallaHome(
                             onNavReservas = goReservas,
                             onNavBebe = onNavBebe,
                             onNavInfo = { _ -> onNavInfo() },
-                            onNavChat = { navController.navigate(ItemMenu.PacienteChat.ruta) }
+                            onNavChat = { navController.navigate(ItemMenu.PacienteChat.ruta) },
+                            onNavMisReservas = goMisReservas
                         )
                     }
                     composable(ItemMenu.PacienteBebe.ruta) {
                         PantallaAnadirBebe(onVolver = { navController.popBackStack() })
+                    }
+                    composable(ItemMenu.PacienteInventario.ruta) {
+                        val pacienteId = uiState.userId ?: 0L
+                        com.example.lactacare.vistas.paciente.inventario.PantallaInventario(
+                            idPaciente = pacienteId
+                        )
                     }
                     composable(ItemMenu.PacienteChat.ruta) { PantallaChat() }
                     composable(ItemMenu.PacientePerfil.ruta) {
                         PantallaPerfilPaciente(onLogout = onLogout)
                     }
                     composable("agendar_paciente") {
-                        PantallaAgendar(onVolver = { navController.popBackStack() })
+                        PantallaAgendar(
+                            onVolver = { navController.popBackStack() },
+                            onNavSeleccionarHorario = { lactarioId, nombreSala ->
+                                // Navegar a selección de cubículo primero
+                                navController.navigate("seleccionar_cubiculo/$lactarioId/$nombreSala")
+                            }
+                        )
+                    }
+                    // NUEVA RUTA: Selección de Cubículo
+                    composable(
+                        route = "seleccionar_cubiculo/{idSala}/{nombreSala}",
+                        arguments = listOf(
+                            navArgument("idSala") { type = NavType.LongType },
+                            navArgument("nombreSala") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val idSala = backStackEntry.arguments?.getLong("idSala") ?: 0L
+                        val nombreSala = backStackEntry.arguments?.getString("nombreSala") ?: ""
+
+                        com.example.lactacare.vistas.paciente.reserva.PantallaSeleccionCubiculo(
+                            idSala = idSala,
+                            nombreSala = nombreSala,
+                            onVolver = { navController.popBackStack() },
+                            onCubiculoSeleccionado = { cubiculoId, nombreCubiculo ->
+                                navController.navigate("seleccionar_fecha_hora/$idSala/$nombreSala/$cubiculoId/$nombreCubiculo")
+                            }
+                        )
+                    }
+                    // ✅ RUTA SELECCIONAR FECHA/HORA (Actualizada con cubículo)
+                    composable(
+                        route = "seleccionar_fecha_hora/{lactarioId}/{nombreSala}/{cubiculoId}/{nombreCubiculo}",
+                        arguments = listOf(
+                            navArgument("lactarioId") { type = NavType.LongType },
+                            navArgument("nombreSala") { type = NavType.StringType },
+                            navArgument("cubiculoId") { type = NavType.LongType },
+                            navArgument("nombreCubiculo") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val lactarioId = backStackEntry.arguments?.getLong("lactarioId") ?: 0L
+                        val nombreSala = backStackEntry.arguments?.getString("nombreSala") ?: ""
+                        val cubiculoId = backStackEntry.arguments?.getLong("cubiculoId") ?: 0L
+                        val nombreCubiculo = backStackEntry.arguments?.getString("nombreCubiculo") ?: ""
+
+                        PantallaSeleccionarFechaHora(
+                            lactarioId = lactarioId,
+                            nombreSala = nombreSala,
+                            cubiculoId = cubiculoId,
+                            nombreCubiculo = nombreCubiculo,
+                            onNavigateBack = { navController.popBackStack() },
+                            onReservaConfirmada = {
+                                navController.navigate("mis_reservas_paciente") {
+                                    popUpTo("home_paciente") { inclusive = false }
+                                }
+                            }
+                        )
+                    }
+                    // ✅ RUTA MIS RESERVAS - SOLUCIÓN COMPLETA
+                    composable("mis_reservas_paciente") {
+                        val pacienteId = uiState.userId ?: 0L
+
+                        com.example.lactacare.vistas.paciente.reserva.PantallaMisReservas(
+                            pacienteId = pacienteId,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
                     }
 
                     // ==========================================
