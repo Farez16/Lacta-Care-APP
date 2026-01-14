@@ -78,10 +78,10 @@ class AgendarViewModel @Inject constructor(
                         telefono = dto.telefono ?: "",
                         latitud = dto.latitud ?: "0.0",
                         longitud = dto.longitud ?: "0.0",
-                        idInstitucion = 0,
-                        horaApertura = dto.horaApertura?.substring(0, 5) ?: "08:00",  // ✅ NUEVO
-                        horaCierre = dto.horaCierre?.substring(0, 5) ?: "18:00",      // ✅ NUEVO
-                        nombreInstitucion = dto.nombreInstitucion ?: ""                // ✅ NUEVO
+                        idInstitucion = dto.institucion?.idInstitucion?.toInt() ?: 0,
+                        horaApertura = dto.horario?.horaInicio?.substring(0, 5) ?: "08:00",
+                        horaCierre = dto.horario?.horaFin?.substring(0, 5) ?: "18:00",
+                        nombreInstitucion = dto.institucion?.nombreInstitucion ?: ""
                     )
                 }
                 _uiState.value = _uiState.value.copy(
