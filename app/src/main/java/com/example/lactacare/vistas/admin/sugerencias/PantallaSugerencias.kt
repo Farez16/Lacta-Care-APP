@@ -114,7 +114,7 @@ fun ItemSugerenciaPremium(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = sugerencia.detalle,
+                        text = sugerencia.detalle ?: "Sin descripción",
                         fontSize = 14.sp,
                         color = Color.Gray,
                         maxLines = 3,
