@@ -12,12 +12,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
+@Parcelize
 data class ContenedorItem(
     val id: String = java.util.UUID.randomUUID().toString(),
     val cantidadMl: BigDecimal
-)
+) : Parcelable
+
 
 data class AtencionUiState(
     val isLoading: Boolean = false,

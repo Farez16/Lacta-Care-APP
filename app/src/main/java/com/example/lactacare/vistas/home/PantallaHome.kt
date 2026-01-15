@@ -271,8 +271,34 @@ fun PantallaHome(
                         com.example.lactacare.vistas.doctor.atencion.PantallaAtencion(
                             idReserva = idReserva,
                             onVolver = { navController.popBackStack() },
-                            onContinuar = { reservaId, contenedores ->
-                                // TODO: Navegar a selección de ubicación
+                            onContinuar = { reservaId, contenedores, idSala ->
+                                // Guardar datos en SavedStateHandle para la siguiente pantalla
+                                navController.currentBackStackEntry?.savedStateHandle?.set("contenedores", contenedores)
+                                navController.currentBackStackEntry?.savedStateHandle?.set("idSala", idSala)
+                                navController.navigate("doctor_ubicacion/$reservaId")
+                            }
+                        )
+                    }
+                    composable("doctor_ubicacion/{idReserva}") { backStackEntry ->
+                        val idReserva = backStackEntry.arguments?.getString("idReserva")?.toLongOrNull() ?: 0L
+                        // Obtener datos del SavedStateHandle
+                        val contenedores = navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.get<List<com.example.lactacare.vistas.doctor.atencion.ContenedorItem>>("contenedores") ?: emptyList()
+                        val idSala = navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.get<Int>("idSala") ?: 1
+                        
+                        com.example.lactacare.vistas.doctor.ubicacion.PantallaSeleccionUbicacion(
+                            idReserva = idReserva,
+                            contenedores = contenedores,
+                            idSala = idSala,
+                            onVolver = { navController.popBackStack() },
+                            onAtencionGuardada = {
+                                // Volver al home después de guardar
+                                navController.navigate(ItemMenu.DoctorInicio.ruta) {
+                                    popUpTo(ItemMenu.DoctorInicio.ruta) { inclusive = true }
+                                }
                             }
                         )
                     }

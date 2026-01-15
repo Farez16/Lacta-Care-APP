@@ -386,7 +386,7 @@ class MainActivity : ComponentActivity() {
                             PantallaAtencion(
                                 idReserva = id,
                                 onVolver = { navController.popBackStack() },
-                                onContinuar = { reservaId, contenedores ->
+                                onContinuar = { reservaId, contenedores, idSala ->
                                     // TODO: Navegar a selección de ubicación
                                 }
                             )

@@ -25,7 +25,7 @@ import com.example.lactacare.vistas.theme.DoctorPrimary
 fun PantallaAtencion(
     idReserva: Long,
     onVolver: () -> Unit,
-    onContinuar: (Long, List<ContenedorItem>) -> Unit,
+    onContinuar: (Long, List<ContenedorItem>, Int) -> Unit, // idReserva, contenedores, idSala
     viewModel: AtencionViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -209,7 +209,10 @@ fun PantallaAtencion(
 
                     // Botón continuar
                     Button(
-                        onClick = { onContinuar(idReserva, uiState.contenedores) },
+                        onClick = { 
+                            val idSala = uiState.reserva?.sala?.id ?: 1
+                            onContinuar(idReserva, uiState.contenedores, idSala)
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
