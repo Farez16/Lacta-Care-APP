@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lactacare.datos.dto.ReservaPacienteDto
 import com.example.lactacare.datos.local.SessionManager
+import com.example.lactacare.datos.network.ApiService
 import com.example.lactacare.dominio.repository.IPatientRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,16 +17,19 @@ import javax.inject.Inject
 
 data class PatientHomeUiState(
     val isLoading: Boolean = false,
+    val nombreCompleto: String? = null,
+    val fotoPerfil: String? = null,
     val proximaCita: ReservaPacienteDto? = null,
     val nombreBebe: String? = null,
-    val sugerencias: List<com.example.lactacare.datos.dto.SugerenciaDto> = emptyList(), // Nuevo campo
+    val sugerencias: List<com.example.lactacare.datos.dto.SugerenciaDto> = emptyList(),
     val error: String? = null
 )
 
 @HiltViewModel
 class PatientHomeViewModel @Inject constructor(
+    private val apiService: ApiService,
     private val repository: IPatientRepository,
-    private val sugerenciasRepo: com.example.lactacare.datos.repository.SugerenciasRepository, // Inyectado
+    private val sugerenciasRepo: com.example.lactacare.datos.repository.SugerenciasRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -40,38 +44,65 @@ class PatientHomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            // 1. Cargar datos del Bebé (Local)
+            // 1. Cargar datos del Paciente (desde API)
+            val idPaciente = sessionManager.userId.first()
+            var nombreCompleto: String? = null
+            var fotoPerfil: String? = null
+            
+            if (idPaciente != null) {
+                try {
+                    val perfilResponse = apiService.obtenerPerfilPaciente(idPaciente)
+                    if (perfilResponse.isSuccessful && perfilResponse.body() != null) {
+                        val perfil = perfilResponse.body()!!
+                        nombreCompleto = buildString {
+                            append(perfil.primerNombre)
+                            if (!perfil.segundoNombre.isNullOrBlank()) {
+                                append(" ${perfil.segundoNombre}")
+                            }
+                            append(" ${perfil.primerApellido}")
+                            if (!perfil.segundoApellido.isNullOrBlank()) {
+                                append(" ${perfil.segundoApellido}")
+                            }
+                        }
+                        fotoPerfil = perfil.imagenPerfil
+                    }
+                } catch (e: Exception) {
+                    // Si falla, continuar sin nombre/foto
+                }
+            }
+            
+            // 2. Cargar datos del Bebé (Local)
             val bebe = sessionManager.babyName.first()
             
-            // 2. Cargar Reservas (Remoto + Real)
-            val idPaciente = sessionManager.userId.first()
+            // 3. Cargar Reservas (Remoto + Real)
             var proxima: ReservaPacienteDto? = null
             
             if (idPaciente != null) {
                 val result = repository.obtenerMisReservas(idPaciente)
                 if (result.isSuccess) {
                     val reservas = result.getOrDefault(emptyList())
-                    // Filtramos las futuras y PENDIENTES
-                    val ahora = LocalTime.now()
-                    val hoy = LocalDate.now().toString()
+                    // Filtramos las futuras y EN RESERVA
+                    val ahora = java.time.LocalTime.now()
+                    val hoy = java.time.LocalDate.now().toString()
                     
                     proxima = reservas
-                        .filter { it.estado == "PENDIENTE" }
-                        // Simplificación: Tomamos la primera que encontremos (idealmente ordenar por fecha)
+                        .filter { it.estado.equals("EN RESERVA", ignoreCase = true) }
                         .sortedBy { it.fecha } 
                         .firstOrNull()
                 }
             }
 
-            // 3. Cargar Sugerencias (Tips) Aleatorias
+            // 4. Cargar Sugerencias (Tips) Aleatorias
             var tips: List<com.example.lactacare.datos.dto.SugerenciaDto> = emptyList()
             val resultTips = sugerenciasRepo.obtenerSugerencias()
             if (resultTips.isSuccess) {
-                tips = resultTips.getOrDefault(emptyList()).shuffled() // Aleatorio
+                tips = resultTips.getOrDefault(emptyList()).shuffled()
             }
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
+                nombreCompleto = nombreCompleto,
+                fotoPerfil = fotoPerfil,
                 nombreBebe = bebe,
                 proximaCita = proxima,
                 sugerencias = tips

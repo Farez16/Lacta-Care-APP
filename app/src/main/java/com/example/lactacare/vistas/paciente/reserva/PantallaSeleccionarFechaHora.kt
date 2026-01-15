@@ -40,7 +40,17 @@ fun PantallaSeleccionarFechaHora(
     viewModel: SeleccionarFechaHoraViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val datePickerState = rememberDatePickerState()
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val selectedDate = java.time.Instant.ofEpochMilli(utcTimeMillis)
+                    .atZone(java.time.ZoneId.of("UTC"))
+                    .toLocalDate()
+                return !selectedDate.isBefore(LocalDate.now())
+            }
+        }
+    )
     var showDatePicker by remember { mutableStateOf(false) }
     // Inicializar ViewModel con cubículo
     LaunchedEffect(Unit) {
@@ -77,7 +87,13 @@ fun PantallaSeleccionarFechaHora(
                             val fecha = java.time.Instant.ofEpochMilli(millis)
                                 .atZone(java.time.ZoneId.of("UTC"))  // ✅ Usar UTC en lugar de systemDefault
                                 .toLocalDate()
-                            viewModel.seleccionarFecha(fecha)
+                            
+                            // Validación adicional de fecha pasada
+                            if (fecha.isBefore(LocalDate.now())) {
+                                viewModel.setError("No puedes seleccionar una fecha pasada")
+                            } else {
+                                viewModel.seleccionarFecha(fecha)
+                            }
                         }
                         showDatePicker = false
                     }

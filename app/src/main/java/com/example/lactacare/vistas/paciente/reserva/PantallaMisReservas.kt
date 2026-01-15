@@ -253,17 +253,18 @@ fun ReservaCard(
     reserva: com.example.lactacare.datos.dto.ReservaPacienteDto,
     onCancelar: (Long) -> Unit
 ) {
-    val estadoColor = when (reserva.estado) {
-        "PENDIENTE" -> Color(0xFFFF9800)
-        "ATENDIDA" -> Color(0xFF4CAF50)
-        "CANCELADA" -> Color(0xFFF44336)
+    // Colores según estado
+    val estadoColor = when (reserva.estado.uppercase()) {
+        "EN RESERVA" -> Color(0xFF9E9E9E)  // Plomo (gris)
+        "CANCELADO", "CANCELADA" -> Color(0xFFFFC107)  // Amarillo
+        "FINALIZADO", "FINALIZADA" -> Color(0xFFE91E63)  // Rosado
         else -> Color.Gray
     }
 
-    val estadoIcon = when (reserva.estado) {
-        "PENDIENTE" -> Icons.Default.Schedule
-        "ATENDIDA" -> Icons.Default.CheckCircle
-        "CANCELADA" -> Icons.Default.Cancel
+    val estadoIcon = when (reserva.estado.uppercase()) {
+        "EN RESERVA" -> Icons.Default.Schedule
+        "CANCELADO", "CANCELADA" -> Icons.Default.Cancel
+        "FINALIZADO", "FINALIZADA" -> Icons.Default.CheckCircle
         else -> Icons.Default.Info
     }
 
@@ -274,68 +275,65 @@ fun ReservaCard(
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header con estado
+            // Header - Solo nombre de la sala e institución
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Nombre de la sala
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MomAccent.copy(alpha = 0.2f),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.MeetingRoom,
-                                contentDescription = null,
-                                tint = DashboardPinkIcon,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            reserva.nombreSala,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = DashboardTextDark
+                Surface(
+                    shape = CircleShape,
+                    color = MomAccent.copy(alpha = 0.2f),
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.MeetingRoom,
+                            contentDescription = null,
+                            tint = DashboardPinkIcon,
+                            modifier = Modifier.size(20.dp)
                         )
-                        reserva.nombreInstitucion?.let {
-                            Text(
-                                it,
-                                fontSize = 12.sp,
-                                color = DashboardTextLight
-                            )
-                        }
                     }
                 }
-
-                // Badge de estado
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = estadoColor.copy(alpha = 0.15f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            estadoIcon,
-                            contentDescription = null,
-                            tint = estadoColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        reserva.nombreSala,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DashboardTextDark
+                    )
+                    reserva.nombreInstitucion?.let {
                         Text(
-                            reserva.estado,
+                            it,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = estadoColor
+                            color = DashboardTextLight
                         )
+                    }
+                    
+                    // Estado debajo del nombre de la sala
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = estadoColor.copy(alpha = 0.15f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                estadoIcon,
+                                contentDescription = null,
+                                tint = estadoColor,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                reserva.estado,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = estadoColor
+                            )
+                        }
                     }
                 }
             }
@@ -364,8 +362,8 @@ fun ReservaCard(
                 )
             }
 
-            // Botón Cancelar (solo para PENDIENTES) ✅ DENTRO DE LA CARD
-            if (reserva.estado == "PENDIENTE") {
+            // Botón Cancelar (solo para EN RESERVA)
+            if (reserva.estado.uppercase() == "EN RESERVA") {
                 Spacer(modifier = Modifier.height(16.dp))
                 Divider(color = Color.LightGray.copy(alpha = 0.3f))
                 Spacer(modifier = Modifier.height(12.dp))

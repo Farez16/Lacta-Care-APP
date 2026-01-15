@@ -3,8 +3,6 @@ package com.example.lactacare.vistas.paciente.inventario
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +12,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.lactacare.vistas.theme.*
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,70 +62,68 @@ fun PantallaInventario(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mi Inventario") },
+                title = { Text("Mi Inventario", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF2196F3),
+                    containerColor = MomPrimary,
                     titleContentColor = Color.White
-                ),
-                actions = {
-                    IconButton(onClick = { viewModel.cargarInventario(idPaciente) }) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Recargar",
-                            tint = Color.White
-                        )
-                    }
-                }
+                )
             )
-        }
+        },
+        containerColor = DashboardBg
     ) { padding ->
-        Column(
+        SwipeRefresh(
+            state = rememberSwipeRefreshState(uiState.isLoading),
+            onRefresh = { viewModel.cargarInventario(idPaciente) },
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Filtros
-            FilasChipsFiltro(
-                filtroActual = uiState.filtroActual,
-                onFiltroClick = { viewModel.aplicarFiltro(it) }
-            )
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Filtros
+                FilasChipsFiltro(
+                    filtroActual = uiState.filtroActual,
+                    onFiltroClick = { viewModel.aplicarFiltro(it) }
+                )
 
-            // Contenido
-            when {
-                uiState.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = Color(0xFF2196F3))
+                // Contenido
+                when {
+                    uiState.isLoading && uiState.contenedoresFiltrados.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = MomPrimary)
+                        }
                     }
-                }
 
-                uiState.contenedoresFiltrados.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No hay contenedores",
-                            fontSize = 16.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(uiState.contenedoresFiltrados) { contenedor ->
-                            TarjetaContenedor(
-                                contenedor = contenedor,
-                                onRetirarClick = { viewModel.mostrarDialogRetirar(contenedor) }
+                    uiState.contenedoresFiltrados.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No hay contenedores",
+                                fontSize = 16.sp,
+                                color = Color.Gray
                             )
+                        }
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(uiState.contenedoresFiltrados) { contenedor ->
+                                TarjetaContenedor(
+                                    contenedor = contenedor,
+                                    onRetirarClick = { viewModel.mostrarDialogRetirar(contenedor) }
+                                )
+                            }
                         }
                     }
                 }
@@ -172,16 +171,15 @@ fun FilasChipsFiltro(
                     label = {
                         Text(
                             text = when (filtro) {
-                                FiltroInventario.TODO -> "Todo"
-                                FiltroInventario.CADUCADA -> "Caducada"
+                                FiltroInventario.TODOS -> "Todos"
                                 FiltroInventario.REFRIGERADA -> "Refrigerada"
-                                FiltroInventario.CONGELADA -> "Congelada"
+                                FiltroInventario.CADUCADA -> "Caducada"
                                 FiltroInventario.RETIRADA -> "Retirada"
                             }
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFF2196F3),
+                        selectedContainerColor = MomPrimary,
                         selectedLabelColor = Color.White
                     )
                 )
