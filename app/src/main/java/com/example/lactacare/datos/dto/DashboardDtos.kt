@@ -23,11 +23,20 @@ data class PacienteDto(
 )
 
 // --- ESPEJO DE ReservaDTO.java ---
+// --- ESPEJO DE ReservaDTO.java (Flattened to avoid 500 error recursion) ---
 data class ReservaDto(
     @SerializedName("idReserva") val id: Long,
-    @SerializedName("estado") val estado: String?, // "ACTIVA", "CANCELADA"
-    @SerializedName("fecha") val fecha: String?,   // "2025-12-22"
+    @SerializedName("estado") val estado: String?,
+    @SerializedName("fecha") val fecha: String?,
     @SerializedName("horaInicio") val horaInicio: String?,
-    @SerializedName("salaLactancia") val salaLactancia: SalaLactanciaDto?,
-    @SerializedName("personaPaciente") val personaPaciente: PacienteDto?
+    @SerializedName("horaFin") val horaFin: String?,
+
+    // Flattened Fields
+    @SerializedName("idPaciente") val idPaciente: Long?,
+    @SerializedName("nombrePaciente") val nombrePaciente: String?,
+    @SerializedName("apellidoPaciente") val apellidoPaciente: String?,
+
+    @SerializedName("idSala") val idSala: Long?,
+    @SerializedName("nombreSala") val nombreSala: String?,
+    @SerializedName("nombreInstitucion") val nombreInstitucion: String?
 )

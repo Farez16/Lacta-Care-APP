@@ -100,7 +100,7 @@ fun PantallaHome(
                 val drawerItems = listOf(
                     Triple(ItemMenu.AdminIA, "IA", ItemMenu.AdminIA.ruta),
                     Triple(ItemMenu.AdminSugerencias, "Sugerencias", ItemMenu.AdminSugerencias.ruta),
-                    Triple(ItemMenu.AdminImagenes, "Imágenes", ItemMenu.AdminImagenes.ruta),
+                    // Removed Imagenes as per request
                     Triple(ItemMenu.AdminReporte, "Generar Reporte", "action_report")
                 )
 
@@ -132,15 +132,13 @@ fun PantallaHome(
                     colorActivo = colorPrincipal,
                     onItemClick = { item ->
                         navController.navigate(item.ruta) {
-                            if (item.ruta == itemsMenu.first().ruta) {
-                                popUpTo(0) { saveState = false }
-                            } else {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
+                        navController.navigate(item.ruta) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
                             }
                             launchSingleTop = true
                             restoreState = true
+                        }
                         }
                     }
                 )
@@ -286,6 +284,8 @@ fun PantallaHome(
                                             colorPrincipal = colorPrincipal,
                                             colorAcento = Color(0xFFE1F5FE),
                                             stats = uiState.adminStats,
+                                            currentFilter = uiState.filtroActual,
+                                            onFilterChange = { viewModel.onFilterChanged(it) },
                                             onNavGestion = { navController.navigate(ItemMenu.AdminGestionUsuarios.ruta) },
                                             onNavAlertas = { navController.navigate(ItemMenu.AdminAlertas.ruta) },
                                             onNavReportes = onNavReportes // PASAMOS EL CALLBACK
