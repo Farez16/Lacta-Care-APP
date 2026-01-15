@@ -1,21 +1,24 @@
 package com.example.lactacare.vistas.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.outlined.Apartment // Para Admin (Domain)
-import androidx.compose.material.icons.outlined.ChildCare // Para Usuario
-import androidx.compose.material.icons.outlined.HealthAndSafety // Para Doctor
+import androidx.compose.material.icons.outlined.Apartment
+import androidx.compose.material.icons.outlined.ChildCare
+import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,103 +26,95 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lactacare.dominio.model.RolUsuario
 
-// --- COLORES EXTRAÍDOS DE TU HTML ---
+// --- COLORES MINIMALISTAS ---
+val BackgroundMinimal = Color(0xFFFEFEFE) // Casi blanco absoluto
+val TextDark = Color(0xFF2D3436)
+val TextGray = Color(0xFF636E72)
 
-val FondoTarjeta = Color(0xFFF9F6F2)  // Igual al fondo o un poco más claro
-val BeigeClaro = Color(0xFFEFEBE4)    // bg-beige-light (Fondo de los iconos)
-val TextoPrimario = Color(0xFF4A4A4A) // text-primary
-val TextoSecundario = Color(0xFF7D7D7D)
+// Acentos Suaves
+val SoftPink = Color(0xFFFCE4EC)  // Fondo Icono Paciente
+val PinkAccent = Color(0xFFE91E63) // Icono Paciente
 
-// Colores de Acento (Iconos)
-val AccentAdmin = Color(0xFFA3C9A8)   // Verde pastel
-val AccentDoctor = Color(0xFFB0C4DE)  // Azul acero claro
-val AccentUser = Color(0xFFF4C2C2)    // Rosa pastel
+val SoftBlue = Color(0xFFE3F2FD)  // Fondo Icono Medico
+val BlueAccent = Color(0xFF2196F3) // Icono Medico
+
+val SoftGreen = Color(0xFFE8F5E9) // Fondo Icono Admin
+val GreenAccent = Color(0xFF4CAF50) // Icono Admin
 
 @Composable
 fun PantallaBienvenida(
-    // Este evento nos devolverá QUÉ rol eligió el usuario
     onRolSeleccionado: (RolUsuario) -> Unit
 ) {
-    // Contenedor Principal
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(BackgroundMinimal)
             .verticalScroll(rememberScrollState())
+            .padding(24.dp), // Margen global consistente
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        // 1. SECCIÓN SUPERIOR (HEADER)
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // 1. LOGO & HEADER
+        Image(
+            painter = painterResource(id = com.example.lactacare.R.drawable.app_logo),
+            contentDescription = "LactaCare Logo",
+            modifier = Modifier.size(160.dp), // Tamaño equilibrado
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "LactaCare",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = TextDark,
+            letterSpacing = 1.sp
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "Equilibrando trabajo, estudios y\nmaternidad con apoyo a tu alcance.",
+            fontSize = 16.sp,
+            color = TextGray,
+            textAlign = TextAlign.Center,
+            lineHeight = 24.sp
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // 2. SELECCIÓN DE ROL (GRID VERTICAL)
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 40.dp, bottom = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = "LactaCare",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextoPrimario
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ILUSTRACIÓN (Placeholder)
-            // Cuando tengas tu imagen: Image(painter = painterResource(id = R.drawable.tu_imagen)...)
-            Box(
-                modifier = Modifier
-                    .size(200.dp)
-                    .background(Color(0xFFFFF0E0), shape = RoundedCornerShape(20.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                // Icono temporal
-                Icon(
-                    imageVector = Icons.Outlined.ChildCare,
-                    contentDescription = null,
-                    modifier = Modifier.size(100.dp),
-                    tint = Color(0xFFFFA726)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Equilibrando trabajo, estudios y\nmaternidad con apoyo a tu alcance.",
-                fontSize = 16.sp,
-                color = TextoSecundario,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
-            )
-        }
-
-        // 2. LISTA DE TARJETAS (ROLES)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp) // Espacio entre tarjetas
-        ) {
-            // Tarjeta Paciente
-            TarjetaRol(
+            TarjetaRolMinimal(
                 titulo = "Paciente",
+                subtitulo = "Madres y usuarias",
                 icono = Icons.Outlined.ChildCare,
-                colorIcono = AccentUser,
+                colorFondoIcono = SoftPink,
+                colorIcono = PinkAccent,
                 onClick = { onRolSeleccionado(RolUsuario.PACIENTE) }
             )
 
-
-            // Tarjeta DOCTOR
-            TarjetaRol(
-                titulo = "Medico",
+            TarjetaRolMinimal(
+                titulo = "Médico",
+                subtitulo = "Personal de salud",
                 icono = Icons.Outlined.HealthAndSafety,
-                colorIcono = AccentDoctor,
+                colorFondoIcono = SoftBlue,
+                colorIcono = BlueAccent,
                 onClick = { onRolSeleccionado(RolUsuario.MEDICO) }
             )
 
-            // Tarjeta ADMINISTRADOR
-            TarjetaRol(
+            TarjetaRolMinimal(
                 titulo = "Administrador",
-                icono = Icons.Outlined.Apartment, // Icono similar a "domain"
-                colorIcono = AccentAdmin,
+                subtitulo = "Gestión del sistema",
+                icono = Icons.Outlined.Apartment,
+                colorFondoIcono = SoftGreen,
+                colorIcono = GreenAccent,
                 onClick = { onRolSeleccionado(RolUsuario.ADMINISTRADOR) }
             )
         }
@@ -128,69 +123,77 @@ fun PantallaBienvenida(
 
         // 3. FOOTER
         Text(
-            text = "©2025 | LactaCare.",
+            text = "© 2025 LactaCare",
             fontSize = 12.sp,
-            color = TextoSecundario,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(bottom = 24.dp)
+            color = Color.LightGray,
+            fontWeight = FontWeight.Medium
         )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
-// --- COMPONENTE REUTILIZABLE: TARJETA DE ROL ---
 @Composable
-fun TarjetaRol(
+fun TarjetaRolMinimal(
     titulo: String,
+    subtitulo: String,
     icono: ImageVector,
+    colorFondoIcono: Color,
     colorIcono: Color,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = FondoTarjeta),
-        shape = RoundedCornerShape(24.dp),
-        // Simulamos la sombra "neumorphic" suave del HTML con una elevación ligera y borde sutil
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F2F6)), // Borde muy sutil
+        elevation = CardDefaults.cardElevation(0.dp), // FLAT DESIGN
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
-                .padding(20.dp)
+                .padding(16.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icono con fondo cuadrado redondeado
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(BeigeClaro, shape = RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
+            // Icono Circular
+            Surface(
+                shape = CircleShape,
+                color = colorFondoIcono,
+                modifier = Modifier.size(56.dp)
             ) {
-                Icon(
-                    imageVector = icono,
-                    contentDescription = null,
-                    tint = colorIcono,
-                    modifier = Modifier.size(32.dp)
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icono,
+                        contentDescription = null,
+                        tint = colorIcono,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Textos
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = titulo,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
+                )
+                Text(
+                    text = subtitulo,
+                    fontSize = 13.sp,
+                    color = TextGray
                 )
             }
 
-            Spacer(modifier = Modifier.width(20.dp))
-
-            // Texto
-            Text(
-                text = titulo,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextoPrimario,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Flechita
+            // Chevron sutil
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Color.LightGray
+                tint = Color(0xFFDFE6E9),
+                modifier = Modifier.size(24.dp)
             )
         }
     }
@@ -198,6 +201,6 @@ fun TarjetaRol(
 
 @Preview(showSystemUi = true)
 @Composable
-fun PreviewBienvenida() {
+fun PreviewBienvenidaMinimal() {
     PantallaBienvenida(onRolSeleccionado = {})
 }

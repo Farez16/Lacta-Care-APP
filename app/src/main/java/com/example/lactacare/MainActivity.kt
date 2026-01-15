@@ -21,17 +21,17 @@ import com.example.lactacare.datos.dto.GoogleUserData
 import com.example.lactacare.datos.dto.AuthState
 import com.example.lactacare.vistas.auth.*
 import com.example.lactacare.vistas.home.PantallaHome
-// --- IMPORT NUEVO ---
 import com.example.lactacare.vistas.admin.usuarios.PantallaGestionUsuarios
 import com.example.lactacare.vistas.admin.usuarios.PantallaCrearEmpleado
 import com.example.lactacare.vistas.doctor.atencion.PantallaAtencion
-// --------------------
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import com.example.lactacare.dominio.model.RolUsuario
 import com.example.lactacare.datos.local.SessionManager
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -46,7 +46,6 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    // ⭐ MOVER AQUÍ: Crear ViewModel compartido
                     val recuperarPasswordViewModel: RecuperarPasswordViewModel = hiltViewModel()
 
                     // 1. DETERMINAR RUTA INICIAL
@@ -62,7 +61,31 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(
                         navController = navController,
-                        startDestination = rutaInicial
+                        startDestination = rutaInicial,
+                        enterTransition = {
+                            slideIntoContainer(
+                                AnimatedContentTransitionScope.SlideDirection.Left,
+                                animationSpec = tween(500)
+                            )
+                        },
+                        exitTransition = {
+                            slideOutOfContainer(
+                                AnimatedContentTransitionScope.SlideDirection.Left,
+                                animationSpec = tween(500)
+                            )
+                        },
+                        popEnterTransition = {
+                            slideIntoContainer(
+                                AnimatedContentTransitionScope.SlideDirection.Right,
+                                animationSpec = tween(500)
+                            )
+                        },
+                        popExitTransition = {
+                            slideOutOfContainer(
+                                AnimatedContentTransitionScope.SlideDirection.Right,
+                                animationSpec = tween(500)
+                            )
+                        }
                     ) {
                         // --- PANTALLA DE BIENVENIDA ---
                         composable("bienvenida") {
