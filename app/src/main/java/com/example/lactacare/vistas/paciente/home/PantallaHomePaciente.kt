@@ -468,16 +468,30 @@ fun HeaderSaludo(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Foto de perfil
-        AsyncImage(
-            model = fotoPerfil,
-            contentDescription = "Foto de perfil",
-            modifier = Modifier
-                .size(52.dp)
-                .clip(CircleShape)
-                .background(Color.LightGray),
-            contentScale = ContentScale.Crop
-        )
+        // Foto de perfil o ícono por defecto
+        if (fotoPerfil != null) {
+            AsyncImage(
+                model = fotoPerfil,
+                contentDescription = "Foto de perfil",
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(Color.LightGray),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            // Ícono por defecto cuando no hay foto
+            Icon(
+                imageVector = Icons.Default.Face,
+                contentDescription = "Foto de perfil",
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(MomPrimary.copy(alpha = 0.1f))
+                    .padding(8.dp),
+                tint = MomPrimary
+            )
+        }
         
         Spacer(modifier = Modifier.width(16.dp))
         

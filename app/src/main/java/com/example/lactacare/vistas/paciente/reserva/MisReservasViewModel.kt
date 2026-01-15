@@ -62,6 +62,8 @@ class MisReservasViewModel @Inject constructor(
             val result = repository.cancelarReserva(idReserva)
             
             if (result.isSuccess) {
+                // Pequeño delay para asegurar que el backend procese el cambio
+                kotlinx.coroutines.delay(300)
                 // Recargar lista
                 cargarReservas(_uiState.value.pacienteId)
             } else {

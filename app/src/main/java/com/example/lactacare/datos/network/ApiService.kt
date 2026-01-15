@@ -129,8 +129,8 @@ interface ApiService {
     @DELETE("api/sugerencias/{id}")
     suspend fun eliminarSugerencia(@Path("id") id: Int): Response<Unit>
 
-    // 7. DOCTOR
-    @GET("api/reservas/fecha/{fecha}")
+    // 7. DOCTOR - Agenda (usando endpoint MOVIL)
+    @GET("api/movil/doctor/agenda/{fecha}")
     suspend fun obtenerAgendaDoctor(
         @Path("fecha") fecha: String // Formato yyyy-MM-dd
     ): Response<List<com.example.lactacare.datos.dto.DoctorReservaDto>>
@@ -143,6 +143,27 @@ interface ApiService {
         @Path("id") id: Long,
         @Body reserva: com.example.lactacare.datos.dto.DoctorReservaDto
     ): Response<Map<String, Any>>
+    
+    // Nuevos endpoints MOVIL para Doctor
+    @GET("api/movil/doctor/estadisticas/{fecha}")
+    suspend fun obtenerEstadisticasDoctor(
+        @Path("fecha") fecha: String // Formato yyyy-MM-dd
+    ): Response<com.example.lactacare.datos.dto.DoctorEstadisticasDto>
+    
+    @GET("api/movil/doctor/refrigeradores/sala/{idSala}")
+    suspend fun obtenerRefrigeradoresPorSala(
+        @Path("idSala") idSala: Long
+    ): Response<List<com.example.lactacare.datos.dto.RefrigeradorDisponibleDto>>
+    
+    @POST("api/movil/doctor/atenciones/completa")
+    suspend fun crearAtencionCompleta(
+        @Body request: com.example.lactacare.datos.dto.CrearAtencionCompletaRequest
+    ): Response<com.example.lactacare.datos.dto.AtencionCompletaResponse>
+    
+    @PATCH("api/movil/doctor/contenedores/{id}/retirar")
+    suspend fun marcarContenedorRetirado(
+        @Path("id") id: Long
+    ): Response<Map<String, String>>
 
     // 8. PACIENTE
     @GET("api/reservas/paciente/{id}")

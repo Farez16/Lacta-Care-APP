@@ -1,218 +1,331 @@
 package com.example.lactacare.vistas.doctor.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.PendingActions
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.lactacare.datos.dto.DoctorReservaDto
 import com.example.lactacare.vistas.theme.DoctorPrimary
-import com.example.lactacare.vistas.theme.TextoOscuroClean
-import com.example.lactacare.vistas.home.DashboardStatCard // Reutilizamos si es posible, o definimos localmente si no es pública
+import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaHomeDoctor(
     onLogout: () -> Unit,
-    onAtender: (Long, String) -> Unit, // (idReserva, nombrePaciente)
+    onNavigateToReservas: () -> Unit = {},
+    onNavigateToSolicitudes: () -> Unit = {},
     viewModel: DoctorHomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val colorPrimary = DoctorPrimary
-    val colorAccent = Color(0xFFE1F5FE) // Un azulito claro para fondo de iconos
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.cargarAgendaHoy() },
-                containerColor = colorPrimary
-            ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Recargar", tint = Color.White)
-            }
+        topBar = {
+            // Opcional: Puedes agregar un TopAppBar aquí si lo necesitas
         }
-    ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize().background(Color(0xFFF9F9F9))) {
-            
-            if (uiState.isLoading) {
-                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = colorPrimary)
-                }
-            } else if (uiState.error != null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Outlined.Groups, contentDescription = null, tint = Color.Red, modifier = Modifier.size(48.dp))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = uiState.error!!,
-                            color = Color.Red,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                        Button(onClick = { viewModel.verificarSalaYCargarAgenda() }) {
-                            Text("Reintentar")
-                        }
-                    }
-                }
-            } else {
-                 DashboardDoctorContent(
-                    uiState = uiState,
-                    colorPrimary = colorPrimary,
-                    colorAccent = colorAccent,
-                    onAtender = onAtender,
-                    onConfirmar = { reserva -> viewModel.confirmarAsistencia(reserva) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header dinámico
+            HeaderDoctor(
+                nombreDoctor = uiState.nombreDoctor,
+                imagenDoctor = uiState.imagenDoctor,
+                onRefresh = { viewModel.cargarEstadisticas(isRefresh = true) },
+                isRefreshing = uiState.isRefreshing
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Cards de estadísticas
+            if (uiState.estadisticas != null) {
+                EstadisticasSection(
+                    estadisticas = uiState.estadisticas!!,
+                    onClickAtenciones = onNavigateToReservas,
+                    onClickSolicitudes = onNavigateToSolicitudes
                 )
             }
-        }
-    }
-}
 
-@Composable
-fun DashboardDoctorContent(
-    uiState: DoctorHomeUiState,
-    colorPrimary: Color,
-    colorAccent: Color,
-    onAtender: (Long, String) -> Unit,
-    onConfirmar: (DoctorReservaDto) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        // ... (resto igual hasta items) ...
-        
-        // Resumen Rápido - SIN CAMBIOS (omitido por brevedad en diff, conservar código original)
+            // Error message
+            if (uiState.error != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFEBEE)
+                    )
+                ) {
+                    Text(
+                        text = uiState.error!!,
+                        modifier = Modifier.padding(16.dp),
+                        color = Color(0xFFC62828)
+                    )
+                }
+            }
 
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val totalCitas = uiState.agenda.size.toString()
-                val pendientes = uiState.agenda.count { it.estado == "PENDIENTE" }.toString()
-                DashboardStatCardLocal(modifier = Modifier.weight(1f), "Citas Hoy", totalCitas, Icons.Outlined.Groups, colorPrimary)
-                DashboardStatCardLocal(modifier = Modifier.weight(1f), "Pendientes", pendientes, Icons.Outlined.PendingActions, Color(0xFFFFB74D))
+            // Loading indicator
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = DoctorPrimary)
+                }
             }
         }
-        
-        item {
-             Text("Agenda de Hoy (${uiState.fechaHoy})", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextoOscuroClean)
-             Spacer(modifier = Modifier.height(12.dp))
-             if (uiState.agenda.isEmpty()) {
-                 Text("No hay citas programadas para hoy.", color = Color.Gray)
-             }
-        }
-
-        items(uiState.agenda) { reserva ->
-            ItemReservaDoctor(reserva, colorPrimary, colorAccent, onAtender, onConfirmar)
-        }
     }
 }
 
 @Composable
-fun ItemReservaDoctor(
-    reserva: DoctorReservaDto,  
-    colorPrimary: Color, 
-    colorAccent: Color,
-    onAtender: (Long, String) -> Unit,
-    onConfirmar: (DoctorReservaDto) -> Unit
+fun HeaderDoctor(
+    nombreDoctor: String,
+    imagenDoctor: String?,
+    onRefresh: () -> Unit,
+    isRefreshing: Boolean
 ) {
-    val nombrePaciente = reserva.paciente?.nombreCompleto() ?: "Paciente Desconocido"
-    val inicial = nombrePaciente.firstOrNull()?.toString() ?: "?"
-    
-    // Habilitar clic solo si es PENDIENTE (opcional)
-    val esPendiente = reserva.estado == "PENDIENTE"
+    val saludo = obtenerSaludo()
     
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        onClick = {
-            if (esPendiente) {
-                onAtender(reserva.id, nombrePaciente)
-            }
-        }
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = DoctorPrimary
+        ),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier.size(50.dp).background(colorAccent, CircleShape),
-                contentAlignment = Alignment.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
             ) {
-                Text(inicial, fontWeight = FontWeight.Bold, color = colorPrimary, fontSize = 20.sp)
+                // Imagen del doctor o ícono por defecto
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Doctor",
+                        modifier = Modifier.size(32.dp),
+                        tint = Color.White
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = saludo,
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                    Text(
+                        text = nombreDoctor.ifEmpty { "Doctor" },
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(nombrePaciente, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextoOscuroClean)
-                Text("Estado: ${reserva.estado}", fontSize = 12.sp, color = Color.Gray)
-            }
-            Box(
-                modifier = Modifier.background(colorPrimary.copy(alpha = 0.1f), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp)
+
+            // Botón de refresh
+            IconButton(
+                onClick = onRefresh,
+                enabled = !isRefreshing
             ) {
-                Text(reserva.horaInicio, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colorPrimary)
+                if (isRefreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Actualizar",
+                        tint = Color.White
+                    )
+                }
             }
-            // Check de Asistencia
-             if (esPendiente) {
-                 IconButton(onClick = { onConfirmar(reserva) }) {
-                     Icon(
-                         Icons.Default.CheckCircle, 
-                         contentDescription = "Confirmar Asistencia",
-                         tint = Color.Gray
-                     )
-                 }
-             } else if (reserva.estado == "CONFIRMADA" || reserva.estado == "ASISTIO") {
-                 Icon(
-                     Icons.Default.CheckCircle,
-                     contentDescription = "Asistió",
-                     tint = Color.Green,
-                     modifier = Modifier.padding(start = 8.dp)
-                 )
-             }
         }
     }
 }
 
-// Copia local del componente de tarjeta para evitar problemas de visibilidad si el original es interno
 @Composable
-fun DashboardStatCardLocal(
-    modifier: Modifier = Modifier,
+fun EstadisticasSection(
+    estadisticas: com.example.lactacare.datos.dto.DoctorEstadisticasDto,
+    onClickAtenciones: () -> Unit,
+    onClickSolicitudes: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "Resumen del Día",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        // Primera fila: Citas Hoy y Pendientes
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CardEstadistica(
+                titulo = "Citas Hoy",
+                valor = estadisticas.citasHoy.toString(),
+                icono = Icons.Default.CalendarToday,
+                color = Color(0xFF2196F3),
+                modifier = Modifier.weight(1f)
+            )
+
+            CardEstadistica(
+                titulo = "Pendientes",
+                valor = estadisticas.pendientes.toString(),
+                icono = Icons.Default.PendingActions,
+                color = Color(0xFFFFA726),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Segunda fila: Atenciones y Solicitudes
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CardEstadistica(
+                titulo = "Atenciones",
+                valor = if (estadisticas.proximaReserva != null) "Ver" else "0",
+                icono = Icons.Default.MedicalServices,
+                color = Color(0xFF66BB6A),
+                modifier = Modifier.weight(1f),
+                onClick = onClickAtenciones
+            )
+
+            CardEstadistica(
+                titulo = "Solicitudes",
+                valor = estadisticas.solicitudesRetiro.toString(),
+                icono = Icons.Default.Inventory,
+                color = Color(0xFFEC407A),
+                modifier = Modifier.weight(1f),
+                onClick = onClickSolicitudes
+            )
+        }
+    }
+}
+
+@Composable
+fun CardEstadistica(
     titulo: String,
     valor: String,
-    icono: androidx.compose.ui.graphics.vector.ImageVector,
-    colorIcono: Color
+    icono: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
     Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = modifier
+            .height(120.dp)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                }
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        ),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(icono, contentDescription = null, tint = colorIcono, modifier = Modifier.size(32.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(valor, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextoOscuroClean)
-            Text(titulo, fontSize = 12.sp, color = Color.Gray)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = titulo,
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icono,
+                        contentDescription = titulo,
+                        tint = color,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = valor,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
         }
+    }
+}
+
+fun obtenerSaludo(): String {
+    val hora = LocalTime.now().hour
+    return when {
+        hora < 12 -> "Buenos días"
+        hora < 18 -> "Buenas tardes"
+        else -> "Buenas noches"
     }
 }

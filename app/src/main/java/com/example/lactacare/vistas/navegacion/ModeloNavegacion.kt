@@ -1,6 +1,7 @@
 package com.example.lactacare.vistas.navegacion
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Description
@@ -9,11 +10,13 @@ import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Warning 
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Kitchen // Refrigeradores
 import androidx.compose.material.icons.filled.Feedback // Sugerencias
 import androidx.compose.material.icons.filled.Image // Imagenes
 import androidx.compose.material.icons.filled.Apartment // Instituciones
+import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -30,7 +33,14 @@ sealed class ItemMenu(
     object PacienteChat : ItemMenu("paciente_chat", "Chat IA", Icons.Outlined.SmartToy)
     object PacientePerfil : ItemMenu("paciente_perfil", "Perfil", Icons.Default.Person)
 
-    // --- RUTAS ADMIN / DOCTOR ---
+    // --- RUTAS DOCTOR    // Doctor
+    object DoctorInicio : ItemMenu("doctor_home", "Inicio", Icons.Default.Home)
+    object DoctorReservas : ItemMenu("doctor_reservas", "Reservas", Icons.Default.EventNote)
+    object DoctorPacientes : ItemMenu("doctor_pacientes", "Pacientes", Icons.Default.People)
+    object DoctorAlmacenamiento : ItemMenu("doctor_almacenamiento", "Almacenamiento", Icons.Default.Inventory)
+    object DoctorPerfil : ItemMenu("doctor_perfil", "Perfil", Icons.Default.Person)
+
+    // --- RUTAS ADMIN ---
     object AdminDashboard : ItemMenu("admin_home", "Inicio", Icons.Default.Home)
     object AdminLactarios : ItemMenu("admin_lactarios", "Lactarios", Icons.Default.MeetingRoom)
     object AdminRefrigeradores : ItemMenu("admin_refrigeradores", "Refrigeradores", Icons.Default.Kitchen)
@@ -54,6 +64,13 @@ val menuPaciente = listOf(
     ItemMenu.PacienteBebe,
     ItemMenu.PacienteInventario,
     ItemMenu.PacientePerfil
+)
+
+val menuDoctor = listOf(
+    ItemMenu.DoctorInicio,
+    ItemMenu.DoctorPacientes,
+    ItemMenu.DoctorAlmacenamiento,
+    ItemMenu.DoctorPerfil
 )
 
 val menuAdmin = listOf(

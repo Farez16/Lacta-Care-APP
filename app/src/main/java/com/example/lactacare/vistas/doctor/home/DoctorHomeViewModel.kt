@@ -3,6 +3,7 @@ package com.example.lactacare.vistas.doctor.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lactacare.datos.dto.DoctorReservaDto
+import com.example.lactacare.datos.dto.DoctorEstadisticasDto
 import com.example.lactacare.dominio.repository.IDoctorRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,10 @@ import kotlinx.coroutines.flow.first
 
 data class DoctorHomeUiState(
     val isLoading: Boolean = false,
-    val agenda: List<DoctorReservaDto> = emptyList(),
+    val isRefreshing: Boolean = false,
+    val estadisticas: DoctorEstadisticasDto? = null,
+    val nombreDoctor: String = "",
+    val imagenDoctor: String? = null,
     val error: String? = null,
     val fechaHoy: String = LocalDate.now().toString()
 )
@@ -35,69 +39,55 @@ class DoctorHomeViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     init {
-        verificarSalaYCargarAgenda()
+        cargarDatosIniciales()
     }
-
-    fun verificarSalaYCargarAgenda() {
+    
+    private fun cargarDatosIniciales() {
         viewModelScope.launch {
-            // 1. Verificar si tenemos salaId local
-            var salaId = sessionManager.userSalaId.first()
-
-            // 2. Si no, buscarla en el servidor
-            if (salaId == null) {
-                val email = sessionManager.userEmail.first()
-                if (!email.isNullOrEmpty()) {
-                    val result = authRepository.getEmpleadoData(email)
-                    if (result.isSuccess) {
-                        val empleado = result.getOrNull()
-                        salaId = empleado?.salaLactanciaId
-                        if (salaId != null) {
-                            sessionManager.saveSalaId(salaId)
-                        }
+            // Cargar nombre e imagen del doctor
+            val email = sessionManager.userEmail.first()
+            if (!email.isNullOrEmpty()) {
+                val result = authRepository.getEmpleadoData(email)
+                if (result.isSuccess) {
+                    val empleado = result.getOrNull()
+                    _uiState.value = _uiState.value.copy(
+                        nombreDoctor = "${empleado?.primerNombre ?: ""} ${empleado?.primerApellido ?: ""}".trim()
+                        // TODO: Agregar imagenDoctor cuando esté disponible en el DTO
+                    )
+                    // Guardar salaId si no existe
+                    if (empleado?.salaLactanciaId != null) {
+                        sessionManager.saveSalaId(empleado.salaLactanciaId)
                     }
                 }
             }
-            
-            cargarAgendaHoy(salaId)
+            cargarEstadisticas()
         }
     }
 
-    fun cargarAgendaHoy(salaId: Int? = null) {
+    
+    fun cargarEstadisticas(isRefresh: Boolean = false) {
         viewModelScope.launch {
-             // Si no pasaron salaId, intentamos leerlo de nuevo (refresh manual)
-            val finalSalaId = salaId ?: sessionManager.userSalaId.first()
-
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            if (isRefresh) {
+                _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            }
             
-            // Usar fecha real del dispositivo
             val hoy = LocalDate.now().toString()
-            
-            val result = repository.obtenerAgendaDelDia(hoy)
+            val result = repository.obtenerEstadisticasDoctor(hoy)
             
             if (result.isSuccess) {
-                val todasLasReservas = result.getOrDefault(emptyList())
-                
-                // FILTRADO: Solo reservas de la sala asignada
-                val agendaFiltrada = if (finalSalaId != null) {
-                    todasLasReservas.filter { it.sala?.id == finalSalaId }
-                } else {
-                    // Si no hay sala asignada, ¿mostramos todo o nada?
-                    // Por seguridad, si no tiene sala asignada, mejor no mostrar nada o todo.
-                    // Mostremos todo por ahora para no bloquear, o vacio.
-                    // El requerimiento dice que DEBE ver solo SU sala.
-                    emptyList() 
-                }
-
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    agenda = agendaFiltrada,
-                    fechaHoy = hoy,
-                    error = if (finalSalaId == null) "No tienes una sala de lactancia asignada." else null
+                    isRefreshing = false,
+                    estadisticas = result.getOrNull(),
+                    fechaHoy = hoy
                 )
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = result.exceptionOrNull()?.message ?: "Error al cargar agenda"
+                    isRefreshing = false,
+                    error = result.exceptionOrNull()?.message ?: "Error al cargar estadísticas"
                 )
             }
         }
@@ -112,8 +102,8 @@ class DoctorHomeViewModel @Inject constructor(
             val result = repository.actualizarReserva(reserva.id, reservaActualizada)
             
             if (result.isSuccess) {
-                // Recargar agenda para reflejar cambios
-                cargarAgendaHoy()
+                // Recargar estadísticas para reflejar cambios
+                cargarEstadisticas()
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

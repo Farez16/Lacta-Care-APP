@@ -54,16 +54,8 @@ class PatientHomeViewModel @Inject constructor(
                     val perfilResponse = apiService.obtenerPerfilPaciente(idPaciente)
                     if (perfilResponse.isSuccessful && perfilResponse.body() != null) {
                         val perfil = perfilResponse.body()!!
-                        nombreCompleto = buildString {
-                            append(perfil.primerNombre)
-                            if (!perfil.segundoNombre.isNullOrBlank()) {
-                                append(" ${perfil.segundoNombre}")
-                            }
-                            append(" ${perfil.primerApellido}")
-                            if (!perfil.segundoApellido.isNullOrBlank()) {
-                                append(" ${perfil.segundoApellido}")
-                            }
-                        }
+                        // Solo primer nombre + primer apellido
+                        nombreCompleto = "${perfil.primerNombre} ${perfil.primerApellido}"
                         fotoPerfil = perfil.imagenPerfil
                     }
                 } catch (e: Exception) {

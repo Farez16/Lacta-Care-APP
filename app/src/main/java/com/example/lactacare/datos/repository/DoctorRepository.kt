@@ -21,6 +21,19 @@ class DoctorRepository @Inject constructor(
             Result.failure(e)
         }
     }
+    
+    override suspend fun obtenerEstadisticasDoctor(fecha: String): Result<com.example.lactacare.datos.dto.DoctorEstadisticasDto> {
+        return try {
+            val response = apiService.obtenerEstadisticasDoctor(fecha)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception(response.message()))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     override suspend fun crearAtencion(request: com.example.lactacare.datos.dto.CrearAtencionRequest): Result<Boolean> {
         return try {

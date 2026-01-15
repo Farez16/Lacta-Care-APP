@@ -67,7 +67,7 @@ fun PantallaHome(
     // 1. Configuración de Menú y Colores según Rol
     val (itemsMenu, colorPrincipal) = when (rolUsuario) {
         RolUsuario.PACIENTE -> Pair(menuPaciente, MomPrimary)
-        RolUsuario.MEDICO -> Pair(menuAdmin, DoctorPrimary)
+        RolUsuario.MEDICO -> Pair(menuDoctor, DoctorPrimary)
         RolUsuario.ADMINISTRADOR -> Pair(menuAdmin, AdminPrimary)
     }
 
@@ -75,9 +75,9 @@ fun PantallaHome(
     val currentRoute = navBackStackEntry?.destination?.route
     val uiState by viewModel.uiState.collectAsState()
 
-    // 2. ESTADO DEL DRAWER (Menú Lateral)
+    // 2. ESTADO DEL DRAWER (Menú Lateral) - Solo para Administrador
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val gesturesEnabled = rolUsuario == RolUsuario.ADMINISTRADOR || rolUsuario == RolUsuario.MEDICO
+    val gesturesEnabled = rolUsuario == RolUsuario.ADMINISTRADOR
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -248,7 +248,52 @@ fun PantallaHome(
                     }
 
                     // ==========================================
-                    // RUTAS ADMIN / MEDICO
+                    // RUTAS DOCTOR
+                    // ==========================================
+                    composable(ItemMenu.DoctorInicio.ruta) {
+                        PantallaHomeDoctor(
+                            onLogout = {
+                                viewModel.cerrarSesion()
+                                onLogout()
+                            },
+                            onNavigateToReservas = { navController.navigate(ItemMenu.DoctorReservas.ruta) },
+                            onNavigateToSolicitudes = { /* TODO: Navegar a solicitudes */ }
+                        )
+                    }
+                    composable(ItemMenu.DoctorReservas.ruta) {
+                        com.example.lactacare.vistas.doctor.reservas.PantallaListaReservas(
+                            onVolver = { navController.popBackStack() },
+                            onAtender = { idReserva ->
+                                navController.navigate("doctor_atencion/$idReserva")
+                            }
+                        )
+                    }
+                    composable("doctor_atencion/{idReserva}") { backStackEntry ->
+                        val idReserva = backStackEntry.arguments?.getString("idReserva")?.toLongOrNull() ?: 0L
+                        com.example.lactacare.vistas.doctor.atencion.PantallaAtencion(
+                            idReserva = idReserva,
+                            onVolver = { navController.popBackStack() },
+                            onContinuar = { reservaId, contenedores ->
+                                // TODO: Navegar a selección de ubicación
+                            }
+                        )
+                    }
+                    composable(ItemMenu.DoctorPacientes.ruta) {
+                        com.example.lactacare.vistas.doctor.pacientes.PantallaPacientesDoctor(
+                            onVolver = { /* En menú inferior, no se usa */ }
+                        )
+                    }
+                    composable(ItemMenu.DoctorAlmacenamiento.ruta) {
+                        com.example.lactacare.vistas.doctor.almacenamiento.PantallaAlmacenamiento(
+                            onVolver = { /* En menú inferior, no se usa */ }
+                        )
+                    }
+                    composable(ItemMenu.DoctorPerfil.ruta) {
+                        PantallaPerfilDoctor(onLogout = onLogout)
+                    }
+
+                    // ==========================================
+                    // RUTAS ADMIN
                     // ==========================================
                     composable(ItemMenu.AdminDashboard.ruta) {
                         when (rolUsuario) {
@@ -258,7 +303,8 @@ fun PantallaHome(
                                         viewModel.cerrarSesion()
                                         onLogout()
                                     },
-                                    onAtender = onNavAtencion
+                                    onNavigateToReservas = { /* TODO: Navegar a lista de reservas */ },
+                                    onNavigateToSolicitudes = { /* TODO: Navegar a solicitudes */ }
                                 )
                             }
                             else -> {

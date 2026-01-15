@@ -359,12 +359,13 @@ class MainActivity : ComponentActivity() {
                             )
                         ) { backStackEntry ->
                             val id = backStackEntry.arguments?.getLong("id") ?: 0L
-                            val nombre = backStackEntry.arguments?.getString("nombre") ?: "Paciente"
 
                             PantallaAtencion(
                                 idReserva = id,
-                                nombrePaciente = nombre,
-                                onVolver = { navController.popBackStack() }
+                                onVolver = { navController.popBackStack() },
+                                onContinuar = { reservaId, contenedores ->
+                                    // TODO: Navegar a selección de ubicación
+                                }
                             )
                         }
                         // --- PANTALLA: REPORTES ADMIN ---
