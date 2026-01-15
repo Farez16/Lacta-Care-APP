@@ -15,13 +15,13 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 enum class FiltroInventario {
-    TODO, CADUCADA, REFRIGERADA, CONGELADA, RETIRADA
+    TODOS, REFRIGERADA, CADUCADA, RETIRADA
 }
 
 data class InventarioUiState(
     val contenedores: List<ContenedorLecheDto> = emptyList(),
     val contenedoresFiltrados: List<ContenedorLecheDto> = emptyList(),
-    val filtroActual: FiltroInventario = FiltroInventario.TODO,
+    val filtroActual: FiltroInventario = FiltroInventario.TODOS,
     val isLoading: Boolean = false,
     val error: String? = null,
     val mostrarDialogRetirar: Boolean = false,
@@ -64,7 +64,11 @@ class InventarioViewModel @Inject constructor(
 
     fun aplicarFiltro(filtro: FiltroInventario) {
         val contenedoresFiltrados = when (filtro) {
-            FiltroInventario.TODO -> _uiState.value.contenedores
+            FiltroInventario.TODOS -> _uiState.value.contenedores
+            
+            FiltroInventario.REFRIGERADA -> _uiState.value.contenedores.filter {
+                it.estado.equals("Refrigerada", ignoreCase = true)
+            }
             
             FiltroInventario.CADUCADA -> _uiState.value.contenedores.filter { contenedor ->
                 try {
@@ -78,16 +82,8 @@ class InventarioViewModel @Inject constructor(
                 }
             }
             
-            FiltroInventario.REFRIGERADA -> _uiState.value.contenedores.filter {
-                it.estado == "Refrigerada"
-            }
-            
-            FiltroInventario.CONGELADA -> _uiState.value.contenedores.filter {
-                it.estado == "Congelada"
-            }
-            
             FiltroInventario.RETIRADA -> _uiState.value.contenedores.filter {
-                it.estado == "Retirada"
+                it.estado.equals("Retirada", ignoreCase = true)
             }
         }
 
