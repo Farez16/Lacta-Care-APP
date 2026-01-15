@@ -15,11 +15,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.lactacare.datos.dto.ReservaPacienteDto
 import com.example.lactacare.vistas.chat.BurbujaChatFlotante
 import com.example.lactacare.vistas.theme.*
@@ -27,6 +30,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import java.time.LocalTime
 
 @Composable
 fun PantallaHomePaciente(
@@ -53,17 +59,26 @@ fun PantallaHomePaciente(
                     onClick = onNavChat,
                     containerColor = MomPrimary,
                     contentColor = Color.White,
-                    shape = CircleShape
+                    shape = CircleShape,
+                    modifier = Modifier.size(64.dp)
                 ) {
-                    Icon(Icons.Filled.SmartToy, contentDescription = "Chat IA")
+                    Icon(
+                        Icons.Filled.SmartToy,
+                        contentDescription = "Chat IA",
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             }
         ) { padding ->
             DashboardPacienteContent(
                 modifier = Modifier.padding(padding),
+                nombreCompleto = uiState.nombreCompleto,
+                fotoPerfil = uiState.fotoPerfil,
                 proximaCita = uiState.proximaCita,
                 nombreBebe = uiState.nombreBebe,
                 sugerencias = uiState.sugerencias,
+                isLoading = uiState.isLoading,
+                onRefresh = { viewModel.cargarDatosDashboard() },
                 onNavReservas = onNavReservas,
                 onNavBebe = onNavBebe,
                 onNavInfo = onNavInfo,
@@ -83,9 +98,13 @@ fun PantallaHomePaciente(
 @Composable
 fun DashboardPacienteContent(
     modifier: Modifier = Modifier,
+    nombreCompleto: String?,
+    fotoPerfil: String?,
     proximaCita: ReservaPacienteDto?,
     nombreBebe: String?,
     sugerencias: List<com.example.lactacare.datos.dto.SugerenciaDto> = emptyList(),
+    isLoading: Boolean,
+    onRefresh: () -> Unit,
     onNavReservas: () -> Unit,
     onNavBebe: () -> Unit,
     onNavInfo: (String) -> Unit,
@@ -101,300 +120,258 @@ fun DashboardPacienteContent(
         )
     }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DashboardBg),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+    SwipeRefresh(
+        state = rememberSwipeRefreshState(isLoading),
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize()
     ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(DashboardBg),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
 
-        // 1. TARJETA PRINCIPAL (Estado Actual)
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(2.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text(
-                        "Lactario Principal",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = DashboardTextLight
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    if (proximaCita != null) {
-                        // CASO: TIENE CITA
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Filled.CheckCircle,
-                                null,
-                                tint = DashboardPinkIcon,
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Sala ${proximaCita.nombreSala}",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = DashboardTextDark
-                            )
-                        }
-                        Text(
-                            "Tu reserva es el ${proximaCita.fecha} a las ${proximaCita.horaInicio}",
-                            fontSize = 16.sp,
-                            color = DashboardTextLight
-                        )
-// ✅ AGREGAR ESTAS LÍNEAS
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = onNavReservas,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MomAccent,
-                                contentColor = Color(0xFFC13B84)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            elevation = ButtonDefaults.buttonElevation(0.dp)
-                        ) {
-                            Text(
-                                "Reservar Otra Sala",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                        }
-                    } else {
-                        // CASO: NO TIENE CITA
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Outlined.EventAvailable,
-                                null,
-                                tint = Color.Gray,
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Sin reservas activas",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = DashboardTextDark
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Reserva tu espacio en el lactario ahora.",
-                            fontSize = 16.sp,
-                            color = DashboardTextLight
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Botón principal para Reservar
-                        Button(
-                            onClick = onNavReservas,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MomAccent,
-                                contentColor = Color(0xFFC13B84)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            elevation = ButtonDefaults.buttonElevation(0.dp)
-                        ) {
-                            Text(
-                                "Reservar Ahora",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                        }
-                    }
-                }
+            // HEADER SALUDO DINÁMICO
+            item {
+                HeaderSaludo(
+                    nombreCompleto = nombreCompleto,
+                    fotoPerfil = fotoPerfil
+                )
             }
-        }
 
-        // 2. TARJETA MI BEBÉ
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MomAccent.copy(alpha = 0.4f)),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(0.dp),
-                modifier = Modifier.fillMaxWidth().clickable { onNavBebe() }
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp).fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        shadowElevation = 2.dp,
-                        modifier = Modifier.size(64.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Filled.ChildCare,
-                                null,
-                                tint = DashboardPinkIcon,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = if (!nombreBebe.isNullOrEmpty()) nombreBebe else "Mi Bebé",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = DashboardTextDark
-                    )
-                    Text(
-                        text = if (!nombreBebe.isNullOrEmpty()) "Ver registro" else "Registra y sigue el crecimiento.",
-                        fontSize = 14.sp,
-                        color = DashboardTextLight,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = onNavBebe,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MomAccent,
-                            contentColor = Color(0xFFC13B84)
-                        ),
-                        shape = RoundedCornerShape(50),
-                        elevation = ButtonDefaults.buttonElevation(0.dp),
-                        modifier = Modifier.height(40.dp)
-                    ) {
-                        Text(
-                            if (!nombreBebe.isNullOrEmpty()) "Editar Perfil" else "Añadir Bebé",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
-
-        // 3. TARJETA MIS RESERVAS
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(2.dp),
-                modifier = Modifier.fillMaxWidth().clickable { onNavMisReservas() }
-            ) {
-                Row(
+            // 1. TARJETA PRINCIPAL (Estado Actual) - TAMAÑO AUMENTADO
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(2.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .heightIn(min = 200.dp)
                 ) {
-                    // Icono
-                    Surface(
-                        shape = CircleShape,
-                        color = MomAccent.copy(alpha = 0.3f),
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Filled.CalendarMonth,
-                                contentDescription = null,
-                                tint = DashboardPinkIcon,
-                                modifier = Modifier.size(28.dp)
+                    Column(modifier = Modifier.padding(24.dp)) {
+                        Text(
+                            "Lactario Principal",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DashboardTextLight
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (proximaCita != null) {
+                            // CASO: TIENE CITA
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Filled.CheckCircle,
+                                    null,
+                                    tint = DashboardPinkIcon,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    "Sala ${proximaCita.nombreSala}",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = DashboardTextDark
+                                )
+                            }
+                            Text(
+                                "Tu reserva es el ${proximaCita.fecha} a las ${proximaCita.horaInicio}",
+                                fontSize = 16.sp,
+                                color = DashboardTextLight
                             )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = onNavReservas,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MomAccent,
+                                    contentColor = Color(0xFFC13B84)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                elevation = ButtonDefaults.buttonElevation(0.dp)
+                            ) {
+                                Text(
+                                    "Reservar Otra Sala",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
+                        } else {
+                            // CASO: NO TIENE CITA
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Outlined.EventAvailable,
+                                    null,
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    "Sin reservas activas",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = DashboardTextDark
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Reserva tu espacio en el lactario ahora.",
+                                fontSize = 16.sp,
+                                color = DashboardTextLight
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Botón principal para Reservar
+                            Button(
+                                onClick = onNavReservas,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MomAccent,
+                                    contentColor = Color(0xFFC13B84)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                elevation = ButtonDefaults.buttonElevation(0.dp)
+                            ) {
+                                Text(
+                                    "Reservar Ahora",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
                         }
                     }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    // Texto
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Mis Reservas",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = DashboardTextDark
-                        )
-                        Text(
-                            "Ver todas mis reservas",
-                            fontSize = 14.sp,
-                            color = DashboardTextLight,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-
-                    // Flecha
-                    Icon(
-                        Icons.Filled.ChevronRight,
-                        contentDescription = null,
-                        tint = Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
                 }
             }
-        }
 
-        // 4. INFORMATIVO (REAL TIPS)
-        if (sugerencias.isNotEmpty()) {
+            // 2. TARJETA MIS RESERVAS - TAMAÑO AUMENTADO (ELIMINADO CARD "AÑADIR BEBÉ")
             item {
-                Column {
-                    Text(
-                        "Tips Informativos",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = DashboardTextDark,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        items(sugerencias) { tip ->
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
-                                shape = RoundedCornerShape(16.dp),
-                                elevation = CardDefaults.cardElevation(1.dp),
-                                modifier = Modifier
-                                    .width(200.dp)
-                                    .height(180.dp)
-                                    .clickable { tipSeleccionado = tip }
-                            ) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Top
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .clickable { onNavMisReservas() }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Icono
+                        Surface(
+                            shape = CircleShape,
+                            color = MomAccent.copy(alpha = 0.3f),
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Filled.CalendarMonth,
+                                    contentDescription = null,
+                                    tint = DashboardPinkIcon,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        // Texto
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Mis Reservas",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = DashboardTextDark
+                            )
+                            Text(
+                                "Ver todas mis reservas",
+                                fontSize = 14.sp,
+                                color = DashboardTextLight,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+
+                        // Flecha
+                        Icon(
+                            Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+
+            // 3. INFORMATIVO (REAL TIPS)
+            if (sugerencias.isNotEmpty()) {
+                item {
+                    Column {
+                        Text(
+                            "Tips Informativos",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DashboardTextDark,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            items(sugerencias) { tip ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(16.dp),
+                                    elevation = CardDefaults.cardElevation(1.dp),
+                                    modifier = Modifier
+                                        .width(200.dp)
+                                        .height(180.dp)
+                                        .clickable { tipSeleccionado = tip }
                                 ) {
-                                    Icon(
-                                        Icons.Outlined.Lightbulb,
-                                        null,
-                                        tint = DashboardPinkIcon,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        tip.titulo,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 15.sp,
-                                        color = DashboardTextDark,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        tip.detalle ?:"",
-                                        fontSize = 12.sp,
-                                        color = DashboardTextLight,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                        maxLines = 3,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Top
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.Lightbulb,
+                                            null,
+                                            tint = DashboardPinkIcon,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            tip.titulo,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 15.sp,
+                                            color = DashboardTextDark,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            tip.detalle ?:"",
+                                            fontSize = 12.sp,
+                                            color = DashboardTextLight,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        item { Spacer(modifier = Modifier.height(80.dp)) }
+            item { Spacer(modifier = Modifier.height(80.dp)) }
+        }
     }
 }
 
@@ -470,6 +447,54 @@ fun DialogoDetalleTip(
                     Text("Entendido")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun HeaderSaludo(
+    nombreCompleto: String?,
+    fotoPerfil: String?
+) {
+    val saludo = when (LocalTime.now().hour) {
+        in 0..11 -> "Buenos días"
+        in 12..18 -> "Buenas tardes"
+        else -> "Buenas noches"
+    }
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Foto de perfil
+        AsyncImage(
+            model = fotoPerfil,
+            contentDescription = "Foto de perfil",
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(Color.LightGray),
+            contentScale = ContentScale.Crop
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        // Saludo y nombre
+        Column {
+            Text(
+                text = saludo,
+                fontSize = 14.sp,
+                color = DashboardTextLight,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = nombreCompleto ?: "Paciente",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = DashboardTextDark
+            )
         }
     }
 }

@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lactacare.datos.dto.ContenedorLecheDto
+import com.example.lactacare.vistas.theme.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -36,15 +37,16 @@ fun TarjetaContenedor(
                     text = "🥛 ${contenedor.cantidadMililitros ?: 0} ml",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2196F3)
+                    color = DashboardPinkIcon
                 )
                 
                 Badge(
-                    containerColor = when (contenedor.estado) {
-                        "Refrigerada" -> Color(0xFF2196F3)
-                        "Congelada" -> Color(0xFF00BCD4)
-                        "Retirada" -> Color.Gray
-                        else -> Color(0xFFFF9800)
+                    containerColor = when (contenedor.estado?.uppercase()) {
+                        "REFRIGERADA" -> Color(0xFF4CAF50)  // Verde
+                        "CONGELADA" -> Color(0xFF00BCD4)   // Cyan
+                        "RETIRADA" -> Color.Gray           // Gris
+                        "CADUCADA" -> Color(0xFFF44336)    // Rojo
+                        else -> Color(0xFFFF9800)          // Naranja
                     },
                     contentColor = Color.White
                 ) {
@@ -94,15 +96,15 @@ fun TarjetaContenedor(
                 )
             }
 
-            // Botón Retirar (solo si está Refrigerada o Congelada)
-            if (contenedor.estado == "Refrigerada" || contenedor.estado == "Congelada") {
+            // Botón Retirar (solo si está REFRIGERADA)
+            if (contenedor.estado?.equals("Refrigerada", ignoreCase = true) == true) {
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 Button(
                     onClick = onRetirarClick,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4CAF50)
+                        containerColor = MomPrimary
                     )
                 ) {
                     Text("Retirar")

@@ -62,9 +62,27 @@ class SeleccionarFechaHoraViewModel @Inject constructor(
             )
 
             if (result.isSuccess) {
+                val bloques = result.getOrDefault(emptyList())
+                
+                // Filtrar horas pasadas si es HOY
+                val bloquesFiltrados = if (_uiState.value.fechaSeleccionada == LocalDate.now()) {
+                    val horaActual = java.time.LocalTime.now()
+                    bloques.map { bloque ->
+                        val horaInicio = java.time.LocalTime.parse(bloque.horaInicio)
+                        // Marcar como no disponible si la hora ya pasó
+                        if (horaInicio.isBefore(horaActual)) {
+                            bloque.copy(disponible = false)
+                        } else {
+                            bloque
+                        }
+                    }
+                } else {
+                    bloques
+                }
+                
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    bloques = result.getOrDefault(emptyList())
+                    bloques = bloquesFiltrados
                 )
             } else {
                 _uiState.value = _uiState.value.copy(
@@ -102,7 +120,7 @@ class SeleccionarFechaHoraViewModel @Inject constructor(
                 paciente = PacienteIdDto(pacienteId),
                 sala = SalaIdDto(_uiState.value.lactarioId),
                 cubiculo = CubiculoIdDto(_uiState.value.cubiculoId),
-                estado = "PENDIENTE"
+                estado = "EN RESERVA"
             )
             val result = patientRepository.crearReserva(request)
             if (result.isSuccess) {
@@ -120,5 +138,9 @@ class SeleccionarFechaHoraViewModel @Inject constructor(
     }
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+    
+    fun setError(mensaje: String) {
+        _uiState.value = _uiState.value.copy(error = mensaje)
     }
 }
