@@ -15,15 +15,22 @@ val DoctorPrimary = Color(0xFF42A5F5)    // Azul Botón
 val DoctorText = Color(0xFF0D47A1)       // Azul Texto Fuerte
 val DoctorBackground = Color(0xFFE3F2FD) // Azul Fondo Suave
 
-// ADMINISTRADOR - Verde Gestión (UPDATED TO NEON DESIGN)
-val NeonPrimary = Color(0xFFAEF353)      // Verde Lima Neón High Voltage
-val NeonSecondary = NeonPrimary.copy(alpha = 0.15f) // Fondo sutil
-val DarkCharcoal = Color(0xFF222222)     // Negro Carbón
-val CleanBackground = Color(0xFFF8F9FA)  // Gris hueso casi blanco
+// ADMINISTRADOR - Verde Oliva Minimalista (#6A8759)
+val OliveAdmin = Color(0xFF6A8759)           // Verde Oliva Solicitado
+val OliveBackground = Color(0xFFF9FAF9)      // Fondo muy sutil casi blanco verdoso
+val OliveSurface = Color.White               // Superficies Blancas Limpias
+val OliveTextPrimary = Color(0xFF2C3E2D)     // Verde Muy Oscuro (Casi Negro)
+val OliveTextSecondary = Color(0xFF5C6F5D)   // Verde Grisacio para subtítulos
 
-val AdminPrimary = NeonPrimary
-val AdminText = DarkCharcoal
-val AdminBackground = NeonSecondary
+// Alias Legacy para compatibilidad inmediata
+val NeonPrimary = OliveAdmin
+val NeonSecondary = OliveAdmin.copy(alpha = 0.1f)
+val DarkCharcoal = OliveTextPrimary
+val CleanBackground = OliveBackground
+
+val AdminPrimary = OliveAdmin
+val AdminText = OliveTextPrimary
+val AdminBackground = OliveBackground
 
 // --- 2. NEUTROS Y ESTILO "CLEAN" ---
 val TextoOscuroClean = Color(0xFF546E7A)

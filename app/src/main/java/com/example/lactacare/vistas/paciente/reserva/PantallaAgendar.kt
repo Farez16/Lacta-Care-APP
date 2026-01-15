@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -264,14 +265,20 @@ fun CardSalaPaciente(
             }
             Spacer(modifier = Modifier.width(12.dp))
 
-            // FOTO
-            Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.weight(1f).fillMaxHeight()) {
-                Image(
-                    painter = rememberAsyncImagePainter(imagenUrl),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+            // FOTO (Icono Hospital Rosado)
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFCE4EC)), // Pink 50
+                modifier = Modifier.weight(1f).fillMaxHeight()
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.LocalHospital,
+                        contentDescription = "Hospital",
+                        tint = Color(0xFFE91E63), // Pink 500
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
             }
         }
     }

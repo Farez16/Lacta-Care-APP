@@ -11,7 +11,8 @@ import javax.inject.Inject
 data class ReporteDataRaw(
     val reservas: List<com.example.lactacare.datos.dto.ReservaDto>,
     val doctores: List<com.example.lactacare.datos.dto.UsuarioResponseDto>,
-    val pacientes: List<com.example.lactacare.datos.dto.UsuarioResponseDto>
+    val pacientes: List<com.example.lactacare.datos.dto.UsuarioResponseDto>,
+    val institucion: com.example.lactacare.dominio.model.Institucion? = null
 )
 
 class AdminRepository @Inject constructor(
@@ -24,78 +25,150 @@ class AdminRepository @Inject constructor(
             val pacientes = apiService.obtenerPacientes().body() ?: emptyList()
             val reservas = apiService.obtenerReservas().body() ?: emptyList()
             
-            ReporteDataRaw(reservas, doctores, pacientes)
+            val instituciones = apiService.obtenerInstituciones().body() ?: emptyList()
+            
+            ReporteDataRaw(reservas, doctores, pacientes, instituciones.firstOrNull())
         } catch (e: Exception) {
-            ReporteDataRaw(emptyList(), emptyList(), emptyList())
+            ReporteDataRaw(emptyList(), emptyList(), emptyList(), null)
         }
     }
 
-    suspend fun obtenerEstadisticas(): DashboardAdminStats? {
+    suspend fun obtenerEstadisticas(periodo: String = "Mes"): DashboardAdminStats? {
         return try {
-            // 1. Llamadas en paralelo (o secuenciales por simplicidad)
+            // 1. Llamadas en paralelo
             val doctores = apiService.obtenerDoctores().body() ?: emptyList()
             val pacientes = apiService.obtenerPacientes().body() ?: emptyList()
             val reservas = apiService.obtenerReservas().body() ?: emptyList()
 
-            // 2. Calcular fecha de hoy
+            // 2. Filtrar Reservas segÃºn Periodo (ImplementaciÃ³n Robusta)
             val hoy = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                LocalDate.now().toString()
+                java.time.LocalDate.now()
             } else {
-                "2025-12-22" // Fallback seguro
+                 java.time.LocalDate.parse("2024-01-01") // Fallback
             }
 
-            // 3. Contar citas de HOY
-            val citasHoyCount = reservas.count { it.fecha == hoy }
+            // Helper para parsear fechas de forma flexible
+            fun parsearFecha(fechaStr: String?): java.time.LocalDate? {
+                if (fechaStr.isNullOrEmpty()) return null
+                return try {
+                    if (fechaStr.contains("T")) {
+                         java.time.LocalDateTime.parse(fechaStr, java.time.format.DateTimeFormatter.ISO_DATE_TIME).toLocalDate()
+                    } else {
+                         java.time.LocalDate.parse(fechaStr, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    }
+                } catch (e: Exception) {
+                    try {
+                        java.time.LocalDate.parse(fechaStr) // Default ISO
+                    } catch (e2: Exception) {
+                        null
+                    }
+                }
+            }
+            
+            val reservasFiltradas = when (periodo) {
+                "DÃ­a" -> reservas.filter { parsearFecha(it.fecha) == hoy }
+                "Semana" -> {
+                    val inicioSemana = hoy.minusDays(hoy.dayOfWeek.value.toLong() - 1) // Lunes
+                    val finSemana = inicioSemana.plusDays(6) // Domingo
+                    reservas.filter { 
+                        val f = parsearFecha(it.fecha)
+                        f != null && !f.isBefore(inicioSemana) && !f.isAfter(finSemana)
+                    }
+                }
+                "Mes" -> reservas.filter { 
+                     val f = parsearFecha(it.fecha)
+                     f != null && f.month == hoy.month && f.year == hoy.year
+                }
+                else -> reservas 
+            }
 
-            // 4. Crear "Fake" actividad reciente con las últimas reservas reales
+            // 3. Contar citas de HOY 
+            val citasHoyCount = reservas.count { parsearFecha(it.fecha) == hoy }
+
+            // 4. Crear "Fake" actividad reciente con las Ãºltimas reservas reales
             val actividades = reservas.takeLast(3).map { reserva ->
                 ActividadReciente(
-                    titulo = "Reserva: ${reserva.salaLactancia?.nombre ?: "Sala"}",
-                    subtitulo = "${reserva.personaPaciente?.nombreCompleto ?: "Paciente"} - ${reserva.horaInicio}",
+                    titulo = "Reserva: ${reserva.nombreSala ?: "Sala"}",
+                    subtitulo = "${reserva.nombrePaciente ?: "Paciente"} ${reserva.apellidoPaciente ?: ""} - ${reserva.horaInicio}",
                     esAlerta = false
                 )
             }.reversed()
 
-            // 5. Calcular Reservas de la Última Semana (para el gráfico)
+            // 5. Calcular Reservas de la Ãšltima Semana (para el grÃ¡fico)
             val diasSemana = mutableListOf<Pair<String, Int>>()
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            val dayNameFormatter = java.time.format.DateTimeFormatter.ofPattern("EEE") // Ej: Lun, Mar
-
-            // Iteramos los últimos 7 días (incluyendo hoy)
+            val dayNameFormatter = java.time.format.DateTimeFormatter.ofPattern("EEE") 
             for (i in 6 downTo 0) {
-                val fecha = java.time.LocalDate.now().minusDays(i.toLong())
-                val fechaStr = fecha.format(formatter)
-                val count = reservas.count { it.fecha == fechaStr }
-                diasSemana.add(Pair(fecha.format(dayNameFormatter).uppercase().take(1), count))
+                val fechaLoop = hoy.minusDays(i.toLong())
+                // Contamos usando el helper
+                val count = reservas.count { parsearFecha(it.fecha) == fechaLoop }
+                diasSemana.add(Pair(fechaLoop.format(dayNameFormatter).uppercase().take(1), count))
             }
 
-            // 6. CALCULO DE CRECIMIENTO (Mes Actual vs Mes Anterior)
-            val mesActual = java.time.LocalDate.now().monthValue
-            val mesAnterior = java.time.LocalDate.now().minusMonths(1).monthValue
-            
-            // Filtramos asumiendo formato yyyy-MM-dd
+            // 6. CALCULO DE CRECIMIENTO (Mes Actual vs Mes Anterior) - Global
+            val mesActual = hoy.monthValue
+            val mesAnterior = hoy.minusMonths(1).monthValue
+            val yearActual = hoy.year
+            val yearAnterior = hoy.minusMonths(1).year // Cuidado con cambio de aÃ±o
+
             val citasMesActual = reservas.count { 
-                try { java.time.LocalDate.parse(it.fecha, formatter).monthValue == mesActual } catch(e:Exception) { false } 
+                val f = parsearFecha(it.fecha)
+                f != null && f.monthValue == mesActual && f.year == yearActual
             }
-            val citasMesAnterior = reservas.count {
-                try { java.time.LocalDate.parse(it.fecha, formatter).monthValue == mesAnterior } catch(e:Exception) { false }
+            val citasMesAnterior = reservas.count { 
+                 val f = parsearFecha(it.fecha)
+                 f != null && f.monthValue == mesAnterior && f.year == yearAnterior
             }
+            val crecimiento = if (citasMesAnterior > 0) ((citasMesActual - citasMesAnterior).toDouble() / citasMesAnterior) * 100 else 100.0
 
-            val crecimiento = if (citasMesAnterior > 0) {
-                ((citasMesActual - citasMesAnterior).toDouble() / citasMesAnterior) * 100
-            } else {
-                if (citasMesActual > 0) 100.0 else 0.0
-            }
 
-            // 7. Retornar objeto lleno
+
+            // 7. Obtener Alertas Reales
+            val alertas = apiService.obtenerAlertas().body() ?: emptyList()
+            val alertasCount = alertas.size
+
+            // 8. Obtener InstituciÃ³n
+            val instituciones = apiService.obtenerInstituciones().body() ?: emptyList()
+            val institucionPrincipal = instituciones.firstOrNull()
+
+            // 9. Combinar Actividades
+            val actividadesReservas = reservas.takeLast(5).map { reserva ->
+                ActividadReciente(
+                    titulo = "Reserva: ${reserva.nombreSala ?: "Sala"}",
+                    subtitulo = "${reserva.nombrePaciente ?: "Paciente"} ${reserva.apellidoPaciente ?: ""} - ${reserva.horaInicio}",
+                    esAlerta = false
+                )
+            }
+            val actividadesAlertas = alertas.takeLast(5).map { alerta ->
+                ActividadReciente(
+                    titulo = "Alerta: ${alerta.tipoAlerta ?: "Sistema"}",
+                    subtitulo = "${alerta.temperaturaAlerta}Â°C - ${alerta.fechaHoraAlerta}",
+                    esAlerta = true
+                )
+            }
+            val mixActividades = (actividadesAlertas + actividadesReservas).sortedByDescending { it.titulo }.take(5)
+
+            // USAMOS LAS RESERVAS FILTRADAS PARA LA ESTADÃ STICA PRINCIPAL?
+            // "Citas Hoy" suele ser global. "Pacientes" global. 
+            // Quizas solo afecte al grafico? O a "Citas en Periodo"?
+            // Por ahora, stats generales son globales, pero podrÃ­amos aÃ±adir un campo "citasFiltradas"
+            // Pero Dashboard pule citasHoy. Vamos a devolver stats globales pero el grafico podria variar?
+            // El usuario pidiÃ³ filtros. Lo lÃ³gico es que "Citas Hoy" cambie a "Citas Periodo"
+            
+            // Ajustamos 'citasHoy' para que refleje el conteo del periodo seleccionado si queremos reactividad
+            val conteoPeriodo = reservasFiltradas.size
+
             DashboardAdminStats(
                 totalUsuarios = pacientes.size,
                 totalDoctores = doctores.size,
-                citasHoy = citasHoyCount,
-                alertasActivas = 0, // Alertas reales requieren endpoint de alertas
-                actividadesRecientes = actividades,
+                citasHoy = citasHoyCount, // Mantenemos "Hoy" real por consistencia con etiqueta, o cambiamos semÃ¡ntica?
+                // Mejor: Enviamos 'citasHoy' real para la tarjeta y usamos otro campo para el grafico si hiciera falta.
+                // PERO, si el usuario filtra por "Mes", esperarÃ­a ver el de mes?
+                // La UI dice "Citas Hoy". Vamos a dejarlo como HOY real.
+                alertasActivas = alertasCount,
+                actividadesRecientes = mixActividades,
                 citasSemana = diasSemana,
-                crecimientoCitas = crecimiento
+                crecimientoCitas = crecimiento,
+                institucion = institucionPrincipal
             )
 
         } catch (e: Exception) {

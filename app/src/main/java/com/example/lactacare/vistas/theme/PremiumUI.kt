@@ -34,21 +34,20 @@ fun TarjetaPremium(
     content: @Composable () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(24.dp), 
+        shape = RoundedCornerShape(16.dp), 
         colors = CardDefaults.cardColors(containerColor = White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black.copy(alpha=0.05f), spotColor = Color.Black.copy(alpha=0.05f)) // Sombra suave gris
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0F0F0)), // Borde muy sutil
+        modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             if (titulo != null) {
                 Text(
                     text = titulo,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = DarkCharcoal
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = OliveTextPrimary
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
             }
             content()
         }
@@ -111,8 +110,8 @@ fun BotonPildoraSeleccionable(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val containerColor = if (seleccionado) NeonPrimary else Color.Transparent
-    val contentColor = if (seleccionado) DarkCharcoal else TextSecondary
+    val containerColor = if (seleccionado) OliveAdmin else Color.Transparent
+    val contentColor = if (seleccionado) Color.White else OliveTextSecondary
     val borderStroke = if (!seleccionado) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)) else null
 
     Surface(
@@ -120,12 +119,13 @@ fun BotonPildoraSeleccionable(
         shape = RoundedCornerShape(50),
         color = containerColor,
         border = borderStroke,
-        modifier = modifier.height(40.dp)
+        contentColor = contentColor,
+        modifier = modifier.height(36.dp)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp)) {
             Text(
                 text = texto,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if(seleccionado) FontWeight.Bold else FontWeight.Medium),
                 color = contentColor
             )
         }

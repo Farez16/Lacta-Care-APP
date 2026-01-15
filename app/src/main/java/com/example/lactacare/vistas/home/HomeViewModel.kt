@@ -19,7 +19,8 @@ data class HomeUiState(
     val nombreUsuario: String = "Cargando...",
     val userId: Long? = null,
     val isLoading: Boolean = false,
-    // Campo nuevo para guardar las estadísticas del Admin
+    // Campo nuevo para filtro seleccionado
+    val filtroActual: String = "Mes",
     val adminStats: DashboardAdminStats? = null,
     val mensaje: String? = null
 )
@@ -34,7 +35,6 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
     
-    // PdfService instance (Lazy or injected if it was a Singleton, but simpler here)
     private val pdfService = com.example.lactacare.util.PdfService(context)
     
     fun generarReporte() {
@@ -50,6 +50,18 @@ class HomeViewModel @Inject constructor(
          }
     }
     
+    fun onFilterChanged(nuevoFiltro: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(filtroActual = nuevoFiltro, isLoading = true)
+            // Recargamos stats con el filtro
+            val stats = adminRepository.obtenerEstadisticas(nuevoFiltro)
+            _uiState.value = _uiState.value.copy(
+                adminStats = stats,
+                isLoading = false
+            )
+        }
+    }
+
     fun limpiarMensaje() {
         _uiState.value = _uiState.value.copy(mensaje = null)
     }
@@ -66,14 +78,15 @@ class HomeViewModel @Inject constructor(
             val nombreCompleto = sessionManager.userName.first() ?: "Usuario"
             val nombre = nombreCompleto.split(" ").firstOrNull() ?: nombreCompleto
             val rol = sessionManager.userRole.first() ?: "PACIENTE"
-            val userId = sessionManager.userId.first()  // ✅ AGREGAR ESTA LÍNEA
+            val userId = sessionManager.userId.first()
+
             // 2. Lógica según el Rol
             if (rol == "ADMINISTRADOR") {
                 // Si es Admin, pedimos las estadísticas a la API
-                val stats = adminRepository.obtenerEstadisticas()
+                val stats = adminRepository.obtenerEstadisticas("Mes") // Default
                 _uiState.value = _uiState.value.copy(
                     nombreUsuario = nombre,
-                    userId = userId,  // ✅ AGREGAR ESTA LÍNEA
+                    userId = userId,
                     adminStats = stats,
                     isLoading = false
                 )
@@ -81,7 +94,7 @@ class HomeViewModel @Inject constructor(
                 // Si es Paciente o Doctor, por ahora solo mostramos el nombre
                 _uiState.value = _uiState.value.copy(
                     nombreUsuario = nombre,
-                    userId = userId,  // ✅ AGREGAR ESTA LÍNEA
+                    userId = userId,
                     isLoading = false
                 )
             }

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,16 +28,23 @@ fun DashboardAdmin(
     colorPrincipal: Color, // Mantenemos firma original, aunque internamente usaremos MintPrimary si coincide
     colorAcento: Color,
     stats: DashboardAdminStats?,
+    currentFilter: String = "Mes",
+    onFilterChange: (String) -> Unit = {},
     onNavGestion: () -> Unit = {},
     onNavAlertas: () -> Unit = {},
     onNavReportes: () -> Unit = {}
 ) {
     if (stats == null) {
+        // Estado de Error / Vacio (Si isLoading es false en el padre pero no llegaron datos)
         Box(
             modifier = Modifier.fillMaxSize().background(BackgroundPastel), 
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = MintPrimary)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Outlined.Error, null, tint = Color.Gray, modifier = Modifier.size(48.dp))
+                Spacer(Modifier.height(8.dp))
+                Text("No se pudieron cargar los datos.", color = Color.Gray)
+            }
         }
         return
     }
@@ -46,28 +54,100 @@ fun DashboardAdmin(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // 1. Filtros (Visuales)
+        // 0. Header InstituciÃ³n (MÃ³dulo Nuevo)
         item {
-            var selectedFilter by remember { mutableStateOf("Mes") }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Día", "Semana", "Mes", "Personalizado").forEach { filter ->
-                    val isSelected = selectedFilter == filter
-                    BotonPildoraSeleccionable(
-                        texto = filter,
-                        seleccionado = isSelected,
-                        onClick = { selectedFilter = filter },
-                        modifier = Modifier
-                    )
+            stats.institucion?.let { inst ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val logoBitmap = remember(inst.logoInstitucion) {
+                            try {
+                                if (!inst.logoInstitucion.isNullOrEmpty()) {
+                                    val imageBytes = android.util.Base64.decode(inst.logoInstitucion, android.util.Base64.DEFAULT)
+                                    val decoded = android.graphics.BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                    decoded.asImageBitmap()
+                                } else null
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+
+                        if (logoBitmap != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = logoBitmap,
+                                contentDescription = "Logo InstituciÃ³n",
+                                modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                            Spacer(Modifier.width(16.dp))
+                        } else {
+                            // Si falla la decodificaciÃ³n o no hay logo, mostramos icono default
+                            Icon(Icons.Outlined.Business, null, tint = NeonPrimary, modifier = Modifier.size(40.dp))
+                            Spacer(Modifier.width(16.dp))
+                        }
+
+                        Column {
+                            Text(
+                                text = inst.nombreInstitucion,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = DarkCharcoal
+                            )
+                            Text(
+                                text = "Panel Administrativo",
+                                fontSize = 12.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // 2. Tarjeta Principal (Panel de Control)
+        // 1. Filtros (Visuales - Minimalist pills)
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Día", "Semana", "Mes", "Personalizado").forEach { filter ->
+                    val isSelected = currentFilter == filter
+                    val containerColor = if(isSelected) OliveAdmin else Color.Transparent
+                    val contentColor = if(isSelected) Color.White else OliveTextSecondary
+                    val borderColor = if(isSelected) Color.Transparent else Color(0xFFE0E0E0)
+                    
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = containerColor,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
+                        modifier = Modifier
+                            .height(32.dp)
+                            .clickable { onFilterChange(filter) }
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Text(
+                                text = filter, 
+                                color = contentColor, 
+                                fontSize = 13.sp, 
+                                fontWeight = if(isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Tarjeta Principal (Panel de Control - Minimalist)
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = NeonPrimary), // Neon Background
-                shape = RoundedCornerShape(24.dp), 
-                elevation = CardDefaults.cardElevation(4.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White), // White Surface
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)), // Subtle Border
+                elevation = CardDefaults.cardElevation(0.dp), // Flat
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -75,28 +155,28 @@ fun DashboardAdmin(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Panel de Control", color = DarkCharcoal, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        Text("Resumen en tiempo real", color = DarkCharcoal.copy(alpha = 0.8f), fontSize = 14.sp)
+                        Text("Panel de Control", color = OliveTextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif)
+                        Text("Resumen en tiempo real", color = OliveTextSecondary, fontSize = 14.sp)
                         
-                        // Métrica de Crecimiento
+                        // MÃ©trica de Crecimiento
                         stats.crecimientoCitas?.let { crecimiento ->
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(16.dp))
                             Surface(
-                                color = Color.Black.copy(alpha = 0.1f), // Overlay oscuro sutil para legibilidad
-                                shape = RoundedCornerShape(50)
+                                color = OliveAdmin.copy(alpha = 0.1f), 
+                                shape = RoundedCornerShape(8.dp) // Less rounded
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     val icono = if(crecimiento >= 0) Icons.Outlined.TrendingUp else Icons.Outlined.TrendingDown
-                                    Icon(icono, null, tint = DarkCharcoal, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
+                                    Icon(icono, null, tint = OliveAdmin, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
                                     Text(
                                         text = "${if(crecimiento > 0) "+" else ""}${String.format("%.1f", crecimiento)}% vs mes anterior",
-                                        color = DarkCharcoal,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        color = OliveAdmin,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
                             }
@@ -106,7 +186,7 @@ fun DashboardAdmin(
                     Icon(
                         Icons.Outlined.Analytics, 
                         null, 
-                        tint = DarkCharcoal.copy(alpha = 0.2f), // Tint oscuro sutil
+                        tint = OliveAdmin.copy(alpha = 0.2f), 
                         modifier = Modifier.size(64.dp)
                     )
                 }
@@ -159,36 +239,36 @@ fun DashboardAdmin(
             }
         }
 
-        // 4. Actividad Reciente
+        // 4. Actividad Reciente - Minimal
         item {
             TarjetaPremium(titulo = "Actividad Reciente") {
                 if (stats.actividadesRecientes.isEmpty()) {
-                    Text("Sin actividad reciente", color = Color.Gray, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                    Text("Sin actividad reciente", color = OliveTextSecondary, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                 } else {
                     stats.actividadesRecientes.forEachIndexed { index, actividad ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
-                                    .background(BackgroundPastel, RoundedCornerShape(12.dp)),
+                                    .size(36.dp)
+                                    .background(OliveAdmin.copy(alpha = 0.05f), RoundedCornerShape(8.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 val icono = if (actividad.esAlerta) Icons.Outlined.Warning else Icons.Outlined.Info
-                                Icon(icono, null, tint = if (actividad.esAlerta) Color(0xFFEF5350) else NeonPrimary, modifier = Modifier.size(20.dp))
+                                Icon(icono, null, tint = if (actividad.esAlerta) Color(0xFFEF5350) else OliveAdmin, modifier = Modifier.size(18.dp))
                             }
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(actividad.titulo, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextoOscuroClean)
-                                Text(actividad.subtitulo, fontSize = 12.sp, color = Color.Gray)
+                                Text(actividad.titulo, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = OliveTextPrimary)
+                                Text(actividad.subtitulo, fontSize = 12.sp, color = OliveTextSecondary)
                             }
                         }
                         if (index < stats.actividadesRecientes.size - 1) {
-                            HorizontalDivider(color = BackgroundPastel)
+                            Divider(color = Color(0xFFF5F5F5), thickness = 1.dp)
                         }
                     }
                 }
@@ -231,30 +311,33 @@ fun AdminStatCardPremium(
     onClick: () -> Unit = {}
 ) {
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0F0F0)),
         elevation = CardDefaults.cardElevation(0.dp),
         modifier = modifier
-            .height(140.dp) // Altura fija para uniformidad
+            .height(110.dp) // Reduced height
             .clickable { onClick() }
-            .shadow(2.dp, RoundedCornerShape(24.dp), clip = false) // Misma sombra sutil
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(12.dp), // Reduced padding
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(colorIcono.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                    .size(36.dp) // Smaller icon background
+                    .background(colorIcono.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icono, null, tint = colorIcono, modifier = Modifier.size(24.dp))
+                Icon(icono, null, tint = colorIcono, modifier = Modifier.size(18.dp))
             }
             
+            Spacer(Modifier.height(8.dp)) // Reduced spacing
+
             Column {
-                Text(valor, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = TextoOscuroClean)
-                Text(titulo, fontSize = 14.sp, color = Color.Gray)
+                Text(valor, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = OliveTextPrimary) // Smaller font
+                Text(titulo, fontSize = 12.sp, color = OliveTextSecondary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
         }
     }

@@ -7,7 +7,8 @@ data class DashboardAdminStats(
     val alertasActivas: Int,
     val actividadesRecientes: List<ActividadReciente>,
     val citasSemana: List<Pair<String, Int>> = emptyList(),
-    val crecimientoCitas: Double? = null // Comparativa Mes Actual vs Anterior
+    val crecimientoCitas: Double? = null, // Comparativa Mes Actual vs Anterior
+    val institucion: com.example.lactacare.dominio.model.Institucion? = null
 )
 
 data class ActividadReciente(

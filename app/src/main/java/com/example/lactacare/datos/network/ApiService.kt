@@ -33,7 +33,7 @@ interface ApiService {
     suspend fun obtenerPacientes(): Response<List<UsuarioResponseDto>>
 
     // 3. Obtener Reservas (Para contar las de hoy)
-    @GET("api/reservas")
+    @GET("api/movil/reservas")
     suspend fun obtenerReservas(): Response<List<ReservaDto>>
 
     // 4. Crear Empleado (Doctor/Admin)

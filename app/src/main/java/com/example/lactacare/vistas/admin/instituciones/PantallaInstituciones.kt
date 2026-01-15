@@ -26,6 +26,9 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import com.example.lactacare.dominio.model.Institucion
 import com.example.lactacare.vistas.theme.*
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun PantallaInstituciones(
@@ -126,30 +129,39 @@ fun ItemInstitucionPremium(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = CleanBackground,
-                modifier = Modifier.size(60.dp),
-                shadowElevation = 0.dp,
-                border = androidx.compose.foundation.BorderStroke(1.dp, primaryColor.copy(alpha = 0.3f))
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                      if (!institucion.logoInstitucion.isNullOrEmpty()) {
-                        val bitmap = remember(institucion.logoInstitucion) {
-                            try {
-                                val decodedString = Base64.decode(institucion.logoInstitucion, Base64.DEFAULT)
-                                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
-
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
+                        if (institucion.logoInstitucion!!.startsWith("http")) {
+                             AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(institucion.logoInstitucion)
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Logo",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-                            Icon(Icons.Default.Apartment, null, tint = primaryColor, modifier = Modifier.size(32.dp))
+                            val bitmap = remember(institucion.logoInstitucion) {
+                                try {
+                                    val decodedString = Base64.decode(institucion.logoInstitucion, Base64.DEFAULT)
+                                    BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            }
+
+                            if (bitmap != null) {
+                                Image(
+                                    bitmap = bitmap.asImageBitmap(),
+                                    contentDescription = "Logo",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(Icons.Default.Apartment, null, tint = primaryColor, modifier = Modifier.size(32.dp))
+                            }
                         }
                     } else {
                          Icon(Icons.Default.Apartment, null, tint = primaryColor, modifier = Modifier.size(32.dp))
