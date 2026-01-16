@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Image // Imagenes
 import androidx.compose.material.icons.filled.Apartment // Instituciones
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -38,6 +39,7 @@ sealed class ItemMenu(
     object DoctorReservas : ItemMenu("doctor_reservas", "Reservas", Icons.Default.EventNote)
     object DoctorPacientes : ItemMenu("doctor_pacientes", "Pacientes", Icons.Default.People)
     object DoctorAlmacenamiento : ItemMenu("doctor_almacenamiento", "Almacenamiento", Icons.Default.Inventory)
+    object DoctorReportes : ItemMenu("doctor_reportes", "Reportes", Icons.Default.Assessment)
     object DoctorPerfil : ItemMenu("doctor_perfil", "Perfil", Icons.Default.Person)
 
     // --- RUTAS ADMIN ---

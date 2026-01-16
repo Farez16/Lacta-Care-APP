@@ -1,91 +1,181 @@
 package com.example.lactacare.vistas.doctor.reportes
 
+import android.app.Activity
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.lactacare.datos.dto.ContenedorLecheDto
+import com.example.lactacare.datos.dto.EstadisticasDoctorDto
 import com.example.lactacare.datos.network.ApiService
-import com.example.lactacare.vistas.admin.reportes.TipoGrafico
+import com.example.lactacare.servicios.PdfService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
+/**
+ * Estados del UI para reportes del doctor
+ */
 data class DoctorReporteUiState(
     val isLoading: Boolean = false,
-    val totalLecheLitros: Double = 0.0,
-    val totalContenedores: Int = 0,
-    val pacientesAtendidos: Int = 0,
-    val dataGraficoSemanal: List<Pair<String, Float>> = emptyList(), // Día -> Litros
-    val error: String? = null,
-    val tipoGrafico: TipoGrafico = TipoGrafico.Barras
+    val isExportingPdf: Boolean = false,
+    val estadisticas: EstadisticasDoctorDto? = null,
+    val filtroFecha: FiltroFecha = FiltroFecha.Semana,
+    val error: String? = null
 )
 
+/**
+ * Filtros de fecha disponibles
+ */
+enum class FiltroFecha {
+    Hoy, Semana, Mes;
+    
+    fun toDisplayString(): String = when (this) {
+        Hoy -> "Hoy"
+        Semana -> "Última Semana"
+        Mes -> "Último Mes"
+    }
+}
+
+/**
+ * Eventos de PDF para comunicación con la UI
+ */
+sealed class PdfEvent {
+    data class Success(val uri: Uri, val ruta: String) : PdfEvent()
+    data class Error(val message: String) : PdfEvent()
+}
+
+/**
+ * ViewModel para reportes y estadísticas del doctor
+ * Optimizado con query backend que responde en <1s
+ */
 @HiltViewModel
 class DoctorReportesViewModel @Inject constructor(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val pdfService: PdfService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DoctorReporteUiState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        cargarDatosReporte()
-    }
+    private val _pdfEvent = MutableSharedFlow<PdfEvent>()
+    val pdfEvent = _pdfEvent.asSharedFlow()
 
-    fun cargarDatosReporte() {
+    /**
+     * Carga estadísticas del doctor
+     * @param idDoctor ID del doctor (Integer)
+     */
+    fun cargarEstadisticas(idDoctor: Int) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                // 1. Fetch Contenedores (Fuente de verdad para producción de leche)
-                val respContenedores = apiService.obtenerContenedoresLeche()
-                val contenedores = respContenedores.body() ?: emptyList()
-
-                // 2. Fetch Reservas (Para contar pacientes/atenciones)
-                // Nota: Usamos endpoint global y asumimos filtrado por contexto o mostramos global de la sala
-                val respReservas = apiService.obtenerReservas()
-                val reservas = respReservas.body() ?: emptyList()
+                // Calcular fechas según filtro
+                val (fechaInicio, fechaFin) = calcularRangoFechas(_uiState.value.filtroFecha)
                 
-                // --- CÁLCULOS ---
-                
-                // A. Total Leche (Convertir ml a Litros)
-                val totalMl = contenedores.sumOf { it.cantidadMililitros ?: 0.0 }
-                val totalLitros = totalMl / 1000.0
+                // Llamar al endpoint optimizado
+                val response = apiService.obtenerEstadisticasDoctor(
+                    idDoctor = idDoctor,
+                    fechaInicio = fechaInicio,
+                    fechaFin = fechaFin
+                )
 
-                // B. Gráfico Semanal (Simulado agrupando por fecha dummy o real si existe)
-                // Como contenedor tiene fechaHoraExtraccion (String ISO), intentamos parsear
-                val graficoData = agruparLechePorDia(contenedores)
-
+                if (response.isSuccessful && response.body() != null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        estadisticas = response.body(),
+                        error = null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Error al cargar estadísticas: ${response.code()}"
+                    )
+                }
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    totalLecheLitros = String.format("%.2f", totalLitros).toDouble(),
-                    totalContenedores = contenedores.size,
-                    pacientesAtendidos = reservas.count { it.estado == "FINALIZADA" || it.estado == "ATENDIDA" },
-                    dataGraficoSemanal = graficoData
+                    error = "Error: ${e.message}"
                 )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
         }
     }
 
-    private fun agruparLechePorDia(contenedores: List<ContenedorLecheDto>): List<Pair<String, Float>> {
-        // Mock rápido o agrupación real
-        // Asumiendo que queremos mostrar últimos 7 días con datos dummy si no hay fechas parseables
-        // Si hay fechas reales:
-        val map = mutableMapOf<String, Double>()
-        
-        contenedores.forEach { c ->
-            val fecha = c.fechaHoraExtraccion?.take(10) ?: "Desconocido" // yyyy-MM-dd
-            val cant = c.cantidadMililitros ?: 0.0
-            map[fecha] = (map[fecha] ?: 0.0) + cant
-        }
-        
-        // Convert to List<Pair>
-        return map.entries.map { it.key to (it.value / 1000f).toFloat() }.takeLast(7)
+    /**
+     * Cambia el filtro de fecha y recarga datos
+     */
+    fun setFiltroFecha(filtro: FiltroFecha, idDoctor: Int) {
+        _uiState.value = _uiState.value.copy(filtroFecha = filtro)
+        cargarEstadisticas(idDoctor)
     }
-    
-    fun setTipoGrafico(tipo: TipoGrafico) {
-        _uiState.value = _uiState.value.copy(tipoGrafico = tipo)
+
+    /**
+     * Exporta las estadísticas a PDF
+     */
+    fun exportarPdf(nombreDoctor: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isExportingPdf = true)
+            
+            val estadisticas = _uiState.value.estadisticas
+            if (estadisticas == null) {
+                _pdfEvent.emit(PdfEvent.Error("No hay datos para exportar"))
+                _uiState.value = _uiState.value.copy(isExportingPdf = false)
+                return@launch
+            }
+
+            val filtroTexto = _uiState.value.filtroFecha.toDisplayString()
+            val result = pdfService.generarPdfEstadisticas(estadisticas, nombreDoctor, filtroTexto)
+            
+            result.fold(
+                onSuccess = { uri ->
+                    val ruta = pdfService.obtenerRutaLegible(uri)
+                    _pdfEvent.emit(PdfEvent.Success(uri, ruta))
+                },
+                onFailure = { error ->
+                    _pdfEvent.emit(PdfEvent.Error(error.message ?: "Error al generar PDF"))
+                }
+            )
+            
+            _uiState.value = _uiState.value.copy(isExportingPdf = false)
+        }
+    }
+
+    /**
+     * Abre el PDF con una aplicación externa
+     */
+    fun abrirPdf(uri: Uri, activity: Activity) {
+        pdfService.abrirPdf(uri, activity)
+    }
+
+    /**
+     * Calcula el rango de fechas según el filtro seleccionado
+     */
+    private fun calcularRangoFechas(filtro: FiltroFecha): Pair<String, String> {
+        val hoy = LocalDate.now()
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+
+        return when (filtro) {
+            FiltroFecha.Hoy -> {
+                hoy.format(formatter) to hoy.format(formatter)
+            }
+            FiltroFecha.Semana -> {
+                val hace7Dias = hoy.minusDays(7)
+                hace7Dias.format(formatter) to hoy.format(formatter)
+            }
+            FiltroFecha.Mes -> {
+                val hace30Dias = hoy.minusDays(30)
+                hace30Dias.format(formatter) to hoy.format(formatter)
+            }
+        }
+    }
+
+    /**
+     * Limpia el mensaje de error
+     */
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
     }
 }

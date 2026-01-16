@@ -249,13 +249,19 @@ fun PantallaHome(
                     // RUTAS DOCTOR
                     // ==========================================
                     composable(ItemMenu.DoctorInicio.ruta) {
-                        PantallaHomeDoctor(
+                        val idDoctor = uiState.userId?.toInt() ?: 0
+                        com.example.lactacare.vistas.doctor.home.PantallaHomeDoctor(
                             onLogout = {
                                 viewModel.cerrarSesion()
                                 onLogout()
                             },
                             onNavigateToReservas = { navController.navigate(ItemMenu.DoctorReservas.ruta) },
-                            onNavigateToSolicitudes = { /* TODO: Navegar a solicitudes */ }
+                            onNavigateToSolicitudes = {
+                                navController.navigate("doctor_solicitudes")
+                            },
+                            onNavigateToReportes = {
+                                navController.navigate(ItemMenu.DoctorReportes.ruta)
+                            }
                         )
                     }
                     composable(ItemMenu.DoctorReservas.ruta) {
@@ -302,6 +308,11 @@ fun PantallaHome(
                             }
                         )
                     }
+                    composable("doctor_solicitudes") {
+                        com.example.lactacare.vistas.doctor.solicitudes.PantallaSolicitudesDoctor(
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
                     composable(ItemMenu.DoctorPacientes.ruta) {
                         com.example.lactacare.vistas.doctor.pacientes.PantallaPacientesDoctor(
                             onVolver = { /* En menú inferior, no se usa */ }
@@ -314,6 +325,13 @@ fun PantallaHome(
                     }
                     composable(ItemMenu.DoctorPerfil.ruta) {
                         PantallaPerfilDoctor(onLogout = onLogout)
+                    }
+                    composable(ItemMenu.DoctorReportes.ruta) {
+                        val idDoctor = uiState.userId?.toInt() ?: 0
+                        com.example.lactacare.vistas.doctor.reportes.PantallaReportesDoctor(
+                            onVolver = { navController.popBackStack() },
+                            idDoctor = idDoctor
+                        )
                     }
 
                     // ==========================================

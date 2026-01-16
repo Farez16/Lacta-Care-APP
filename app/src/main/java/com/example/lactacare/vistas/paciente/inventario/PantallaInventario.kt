@@ -132,12 +132,16 @@ fun PantallaInventario(
     }
 
     // Dialog de confirmación
-    if (uiState.mostrarDialogRetirar && uiState.contenedorSeleccionado != null) {
-        DialogConfirmarRetiro(
-            contenedor = uiState.contenedorSeleccionado!!,
-            onConfirmar = { viewModel.confirmarRetiro(idPaciente) },
-            onCancelar = { viewModel.cancelarRetiro() }
-        )
+    uiState.contenedorSeleccionado?.let { contenedor ->
+        if (uiState.mostrarDialogRetirar) {
+            DialogConfirmarRetiro(
+                contenedor = contenedor,
+                onConfirmar = { 
+                    viewModel.solicitarRetiro(contenedor, idPaciente) 
+                },
+                onCancelar = { viewModel.cancelarRetiro() }
+            )
+        }
     }
 }
 

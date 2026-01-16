@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ fun PantallaHomeDoctor(
     onLogout: () -> Unit,
     onNavigateToReservas: () -> Unit = {},
     onNavigateToSolicitudes: () -> Unit = {},
+    onNavigateToReportes: () -> Unit = {},
     viewModel: DoctorHomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -60,7 +62,8 @@ fun PantallaHomeDoctor(
                 EstadisticasSection(
                     estadisticas = uiState.estadisticas!!,
                     onClickAtenciones = onNavigateToReservas,
-                    onClickSolicitudes = onNavigateToSolicitudes
+                    onClickSolicitudes = onNavigateToSolicitudes,
+                    onClickReportes = onNavigateToReportes
                 )
             }
 
@@ -186,7 +189,8 @@ fun HeaderDoctor(
 fun EstadisticasSection(
     estadisticas: com.example.lactacare.datos.dto.DoctorEstadisticasDto,
     onClickAtenciones: () -> Unit,
-    onClickSolicitudes: () -> Unit
+    onClickSolicitudes: () -> Unit,
+    onClickReportes: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -245,6 +249,23 @@ fun EstadisticasSection(
                 color = Color(0xFFEC407A),
                 modifier = Modifier.weight(1f),
                 onClick = onClickSolicitudes
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Tercera fila: Card de Reportes (centrado)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            CardEstadistica(
+                titulo = "Reportes",
+                valor = "Ver",
+                icono = Icons.Default.Assessment,
+                color = Color(0xFF1976D2),
+                modifier = Modifier.width(170.dp),
+                onClick = onClickReportes
             )
         }
     }

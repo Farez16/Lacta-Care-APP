@@ -3,6 +3,7 @@ package com.example.lactacare.datos.network
 import com.example.lactacare.datos.dto.BloqueHorarioDto
 import com.example.lactacare.datos.dto.ReservaDto
 import com.example.lactacare.datos.dto.UsuarioResponseDto
+import com.example.lactacare.datos.dto.EstadisticasDoctorDto
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -18,6 +19,7 @@ import retrofit2.http.Path
 import retrofit2.http.Multipart
 import retrofit2.http.Part
 import okhttp3.MultipartBody
+import retrofit2.http.Query
 
 interface ApiService {
 
@@ -187,10 +189,10 @@ interface ApiService {
         @Path("idPaciente") idPaciente: Long
     ): List<ContenedorLecheDto>
     
-    @PUT("api/movil/inventario/retirar/{idContenedor}")
-    suspend fun retirarContenedor(
+    @PATCH("api/movil/inventario/contenedor/{idContenedor}/solicitar-retiro")
+    suspend fun solicitarRetiroContenedor(
         @Path("idContenedor") idContenedor: Long
-    ): Response<String>
+    ): Response<Map<String, String>>
     
     // ==================== CUBÍCULOS ====================
     
@@ -243,4 +245,22 @@ interface ApiService {
 
     @DELETE("api/documentos/{id}")
     suspend fun eliminarDocumento(@Path("id") id: Long): Response<Map<String, Any>>
+
+    // ==================== DOCTOR - SOLICITUDES RETIRO ====================
+    
+    @GET("api/movil/doctor/solicitudes-retiro")
+    suspend fun obtenerSolicitudesRetiro(): List<com.example.lactacare.datos.dto.SolicitudRetiroDto>
+    
+    @PATCH("api/movil/inventario/contenedor/{id}/marcar-retirada")
+    suspend fun marcarComoRetirada(
+        @Path("id") idContenedor: Long
+    ): Response<ContenedorLecheDto>
+
+    // --- ESTADÍSTICAS DOCTOR ---
+    @GET("api/movil/doctor/estadisticas")
+    suspend fun obtenerEstadisticasDoctor(
+        @Query("idDoctor") idDoctor: Int,
+        @Query("fechaInicio") fechaInicio: String? = null,
+        @Query("fechaFin") fechaFin: String? = null
+    ): Response<EstadisticasDoctorDto>
 }

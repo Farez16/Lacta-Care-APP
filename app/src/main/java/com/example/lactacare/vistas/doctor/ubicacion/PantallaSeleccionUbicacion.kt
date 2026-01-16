@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,13 +31,24 @@ fun PantallaSeleccionUbicacion(
     viewModel: UbicacionViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.inicializar(idReserva, contenedores, idSala)
     }
 
+    // Mostrar Toast y navegar cuando se guarda exitosamente
     LaunchedEffect(uiState.atencionGuardada) {
-        if (uiState.atencionGuardada != null) {
+        uiState.atencionGuardada?.let {
+            // Mostrar mensaje de éxito
+            android.widget.Toast.makeText(
+                context,
+                "✅ Atención registrada exitosamente",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            
+            // Navegar al home después de un breve delay
+            kotlinx.coroutines.delay(1500)
             onAtencionGuardada()
         }
     }
@@ -65,7 +77,11 @@ fun PantallaSeleccionUbicacion(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = DoctorPrimary)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = DoctorPrimary)
+                    Spacer(Modifier.height(16.dp))
+                    Text("Guardando atención...", color = DoctorPrimary)
+                }
             }
         } else if (uiState.refrigeradorSeleccionado == null) {
             // Pantalla 1: Seleccionar Refrigerador

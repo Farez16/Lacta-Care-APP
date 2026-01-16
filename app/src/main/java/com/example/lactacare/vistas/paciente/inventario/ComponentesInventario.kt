@@ -34,7 +34,7 @@ fun TarjetaContenedor(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "🥛 ${contenedor.cantidadMililitros ?: 0} ml",
+                    text = "🥛 ${contenedor.cantidadMl} ml",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = DashboardPinkIcon
@@ -70,7 +70,7 @@ fun TarjetaContenedor(
                     color = Color.Gray
                 )
                 Text(
-                    text = formatearFecha(contenedor.fechaHoraExtraccion),
+                    text = formatearFecha(contenedor.fechaExtraccion),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -89,10 +89,10 @@ fun TarjetaContenedor(
                     color = Color.Gray
                 )
                 Text(
-                    text = formatearFecha(contenedor.fechaHoraCaducidad),
+                    text = formatearFecha(contenedor.fechaCaducidad),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (estaCaducado(contenedor.fechaHoraCaducidad)) Color.Red else Color.Black
+                    color = if (estaCaducado(contenedor.fechaCaducidad)) Color.Red else Color.Black
                 )
             }
 
@@ -129,9 +129,9 @@ fun DialogConfirmarRetiro(
             Column {
                 Text("¿Deseas retirar este contenedor?")
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Cantidad: ${contenedor.cantidadMililitros} ml", fontWeight = FontWeight.Bold)
+                Text("Cantidad: ${contenedor.cantidadMl} ml", fontWeight = FontWeight.Bold)
                 Text("Estado: ${contenedor.estado}")
-                Text("Fecha: ${formatearFecha(contenedor.fechaHoraExtraccion)}")
+                Text("Fecha: ${formatearFecha(contenedor.fechaExtraccion)}")
             }
         },
         confirmButton = {

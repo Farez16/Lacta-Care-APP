@@ -72,11 +72,13 @@ class InventarioViewModel @Inject constructor(
             
             FiltroInventario.CADUCADA -> _uiState.value.contenedores.filter { contenedor ->
                 try {
-                    val fechaCaducidad = LocalDateTime.parse(
-                        contenedor.fechaHoraCaducidad,
-                        DateTimeFormatter.ISO_LOCAL_DATE_TIME
-                    )
-                    fechaCaducidad.isBefore(LocalDateTime.now())
+                    contenedor.fechaCaducidad?.let { fechaStr ->
+                        val fechaCaducidad = LocalDateTime.parse(
+                            fechaStr,
+                            DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                        )
+                        fechaCaducidad.isBefore(LocalDateTime.now())
+                    } ?: false
                 } catch (e: Exception) {
                     false
                 }
@@ -113,32 +115,28 @@ class InventarioViewModel @Inject constructor(
         }
     }
 
-    fun confirmarRetiro(idPaciente: Long) {
-        val contenedor = _uiState.value.contenedorSeleccionado ?: return
-
+    fun solicitarRetiro(contenedor: ContenedorLecheDto, idPaciente: Long) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
+            _uiState.update { it.copy(isLoading = true, error = null, mensajeExito = null) }
             try {
-                val response = apiService.retirarContenedor(contenedor.id)
+                val response = apiService.solicitarRetiroContenedor(contenedor.id)
 
                 if (response.isSuccessful) {
                     _uiState.update {
                         it.copy(
-                            mostrarDialogRetirar = false,
-                            contenedorSeleccionado = null,
                             isLoading = false,
-                            mensajeExito = "Contenedor retirado exitosamente"
+                            mensajeExito = "Solicitud de retiro enviada correctamente",
+                            mostrarDialogRetirar = false,
+                            contenedorSeleccionado = null
                         )
                     }
-                    
-                    // Recargar inventario
+                    // Recargar inventario para reflejar el cambio de estado
                     cargarInventario(idPaciente)
                 } else {
                     _uiState.update {
                         it.copy(
-                            error = "Error al retirar: ${response.message()}",
                             isLoading = false,
+                            error = "Error al solicitar retiro: ${response.code()}",
                             mostrarDialogRetirar = false
                         )
                     }
